@@ -1,65 +1,248 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { supabase } from './lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const signUp = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    const user = data.user;
+
+    if (user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: user.id,
+            email: user.email,
+            role: 'owner',
+            name: '',
+            phone: '',
+          },
+        ]);
+
+      if (profileError) {
+        console.error('Profile insert error:', profileError);
+        alert(profileError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    alert('Signup successful!');
+    setLoading(false);
+  };
+
+  const login = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push('/dashboard');
+    console.log(data);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={s.root}>
+      <div style={s.glowTop} />
+      <div style={s.glowBottom} />
+
+      <div style={s.card}>
+        <div style={s.shimmer} />
+
+        <div style={s.brand}>
+          <div style={s.brandIcon}><i className="ti ti-truck" /></div>
+          <span style={s.brandText}>Fleet</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <h1 style={s.title}>Welcome back</h1>
+        <p style={s.subtitle}>Sign in or create an account to continue</p>
+
+        <div style={s.field}>
+          <label style={s.label}>Email</label>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={s.input}
+          />
         </div>
-      </main>
+
+        <div style={s.field}>
+          <label style={s.label}>Password</label>
+          <input
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={s.input}
+          />
+        </div>
+
+        <button onClick={login} disabled={loading} style={s.primaryBtn}>
+          {loading ? 'Please wait...' : 'Login'}
+        </button>
+
+        <button onClick={signUp} disabled={loading} style={s.secondaryBtn}>
+          {loading ? 'Please wait...' : 'Sign Up'}
+        </button>
+      </div>
+
+      <Styles />
     </div>
   );
 }
+
+function Styles() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+      @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css');
+      input::placeholder { color: rgba(20,20,30,0.3); }
+      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+    `}</style>
+  );
+}
+
+const s = {
+  root: {
+    fontFamily: "'Outfit', sans-serif",
+    background: '#F7F7FA',
+    minHeight: '100vh',
+    color: '#1A1A1F',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+    padding: 24,
+    boxSizing: 'border-box',
+  },
+  glowTop: {
+    position: 'fixed', width: 320, height: 320, borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(124,99,255,0.08) 0%, transparent 70%)',
+    top: -100, right: -80, pointerEvents: 'none',
+  },
+  glowBottom: {
+    position: 'fixed', width: 260, height: 260, borderRadius: '50%',
+    background: 'radial-gradient(circle, rgba(124,99,255,0.06) 0%, transparent 70%)',
+    bottom: 60, left: -80, pointerEvents: 'none',
+  },
+  card: {
+    position: 'relative',
+    zIndex: 2,
+    width: '100%',
+    maxWidth: 400,
+    background: '#fff',
+    borderRadius: 24,
+    border: '1px solid rgba(20,20,30,0.07)',
+    padding: 36,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  },
+  shimmer: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 1,
+    background: 'linear-gradient(90deg, transparent, rgba(124,99,255,0.4), transparent)',
+  },
+  brand: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    marginBottom: 28,
+  },
+  brandIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    background: 'rgba(124,99,255,0.1)',
+    border: '1px solid rgba(124,99,255,0.25)',
+    color: '#7C63FF',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 18,
+  },
+  brandText: {
+    fontFamily: "'Outfit', sans-serif",
+    fontWeight: 700, fontSize: 17, letterSpacing: -0.3,
+  },
+  title: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 24, fontWeight: 700, margin: '0 0 6px',
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 13, color: 'rgba(20,20,30,0.45)',
+    margin: '0 0 28px',
+  },
+  field: {
+    marginBottom: 18,
+  },
+  label: {
+    display: 'block',
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
+    color: 'rgba(20,20,30,0.4)', marginBottom: 8,
+  },
+  input: {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1px solid rgba(20,20,30,0.1)',
+    background: '#F7F7FA',
+    fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+    color: '#1A1A1F',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s',
+  },
+  primaryBtn: {
+    width: '100%',
+    marginTop: 8,
+    padding: '13px 0',
+    borderRadius: 14,
+    border: 'none',
+    background: '#7C63FF',
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 600,
+    fontFamily: "'Outfit', sans-serif",
+    cursor: 'pointer',
+    boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
+  },
+  secondaryBtn: {
+    width: '100%',
+    marginTop: 10,
+    padding: '13px 0',
+    borderRadius: 14,
+    border: '1px solid rgba(20,20,30,0.1)',
+    background: '#fff',
+    color: '#1A1A1F',
+    fontSize: 14,
+    fontWeight: 600,
+    fontFamily: "'Outfit', sans-serif",
+    cursor: 'pointer',
+  },
+};
