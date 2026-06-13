@@ -30,17 +30,25 @@ export default function Sidebar({ user, onLogout }) {
   <i className="ti ti-truck" style={s.navIcon} />
   <span>Trucks</span>
 </a>
-        <a href="#" style={s.navItem}>
+        <a href="/drivers" style={s.navItem}>
           <i className="ti ti-id-badge-2" style={s.navIcon} />
           <span>Drivers</span>
         </a>
-        <a href="#" style={s.navItem}>
+        <a href="/trips-management" style={{ ...s.navItem, ...s.navItemActive }}>
           <i className="ti ti-route" style={s.navIcon} />
           <span>Trips</span>
         </a>
-        <a href="#" style={s.navItem}>
+        <a href="/expenses" style={{ ...s.navItem, ...s.navItemActive }}>
           <i className="ti ti-receipt" style={s.navIcon} />
           <span>Expenses</span>
+        </a>
+        <a href="/advances" style={{ ...s.navItem, ...s.navItemActive }}>
+          <i className="ti ti-wallet" style={s.navIcon} />
+          <span>Advances</span>
+        </a>
+        <a href="/settlements" style={s.navItem}>
+          <i className="ti ti-receipt" style={s.navIcon} />
+          <span>Settlements</span>
         </a>
         <a href="#" style={s.navItem}>
           <i className="ti ti-credit-card" style={s.navIcon} />

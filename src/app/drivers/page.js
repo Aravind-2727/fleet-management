@@ -2,35 +2,39 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import Sidebar from '../../components/dashboard/Sidebar';
-import Header from '../../components/dashboard/Header';
+import DashboardLayout from '../../components/dashboard/layout';
 
-export default function TrucksPage({ user, onLogout }) {
-  const [trucks, setTrucks] = useState([]);
+export default function DriversPage({ user, onLogout }) {
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
-  const [truckNumber, setTruckNumber] = useState('');
-  const [notes, setNotes] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [payType, setPayType] = useState('per_trip');
+  const [status, setStatus] = useState('Active');
 
   useEffect(() => {
-    fetchTrucks();
+    fetchDrivers();
   }, []);
 
-  const saveTruck = async () => {
-    if (!truckNumber) {
-      alert('Enter truck number');
+  const saveDriver = async () => {
+    if (!name) {
+      alert('Enter driver name');
       return;
     }
 
     const { error } = await supabase
-      .from('trucks')
+      .from('drivers')
       .insert([
         {
           owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          truck_number: truckNumber,
-          status: 'Active',
-          notes: notes,
+          name: name,
+          phone: phone,
+          email: email,
+          pay_type: payType,
+          status: status,
         },
       ]);
 
@@ -40,18 +44,21 @@ export default function TrucksPage({ user, onLogout }) {
       return;
     }
 
-    setTruckNumber('');
-    setNotes('');
+    setName('');
+    setPhone('');
+    setEmail('');
+    setPayType('per_trip');
+    setStatus('Active');
     setShowForm(false);
 
-    fetchTrucks();
+    fetchDrivers();
 
-    alert('Truck added successfully');
+    alert('Driver added successfully');
   };
 
-  const deleteTruck = async (id) => {
+  const deleteDriver = async (id) => {
     const { error } = await supabase
-      .from('trucks')
+      .from('drivers')
       .delete()
       .eq('id', id);
 
@@ -60,13 +67,13 @@ export default function TrucksPage({ user, onLogout }) {
       return;
     }
 
-    fetchTrucks();
+    fetchDrivers();
   };
 
-  const fetchTrucks = async () => {
+  const fetchDrivers = async () => {
     const { data, error } = await supabase
-      .from('trucks')
-      .select('*');
+      .from('drivers')
+      .select('id, profile_id, status, profiles(name, phone, email)');
 
     console.log('Data:', data);
     console.log('Error:', error);
@@ -74,7 +81,7 @@ export default function TrucksPage({ user, onLogout }) {
     if (error) {
       console.error(error);
     } else {
-      setTrucks(data || []);
+      setDrivers(data || []);
     }
 
     setLoading(false);
@@ -85,26 +92,25 @@ export default function TrucksPage({ user, onLogout }) {
       <div style={s.root}>
         <div style={s.center}>
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
-          <p style={s.muted}>Loading trucks...</p>
+          <p style={s.muted}>Loading drivers...</p>
         </div>
-        <Styles />
       </div>
     );
   }
 
   return (
-    <div style={s.root}>
+    <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
 
         {/* ── HEADER ── */}
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
-            <h1 style={s.headerTitle}>Trucks Management</h1>
+            <h1 style={s.headerTitle}>Drivers Management</h1>
           </div>
 
           <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Truck
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Driver
           </button>
         </div>
 
@@ -112,59 +118,99 @@ export default function TrucksPage({ user, onLogout }) {
         {showForm && (
           <div style={s.formCard}>
             <div style={s.shimmer} />
-            <h3 style={s.formTitle}>Add New Truck</h3>
+            <h3 style={s.formTitle}>Add New Driver</h3>
 
             <div style={s.field}>
-              <label style={s.label}>Truck Number</label>
+              <label style={s.label}>Driver Name</label>
               <input
-                placeholder="e.g. TS09 AB 1234"
-                value={truckNumber}
-                onChange={(e) => setTruckNumber(e.target.value)}
+                placeholder="e.g. John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 style={s.input}
               />
             </div>
 
             <div style={s.field}>
-              <label style={s.label}>Notes</label>
+              <label style={s.label}>Phone</label>
               <input
-                placeholder="Optional notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. +1 555-123-4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 style={s.input}
               />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Email</label>
+              <input
+                placeholder="e.g. john@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Pay Type</label>
+              <select
+                value={payType}
+                onChange={(e) => setPayType(e.target.value)}
+                style={s.input}
+              >
+                <option value="per_trip">Per Trip</option>
+                <option value="monthly_salary">Monthly Salary</option>
+              </select>
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={s.input}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
             </div>
 
             <div style={s.formActions}>
-              <button onClick={saveTruck} style={s.saveBtn}>Save Truck</button>
+              <button onClick={saveDriver} style={s.saveBtn}>Save Driver</button>
               <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
             </div>
           </div>
         )}
 
         {/* ── TABLE ── */}
-        {trucks.length === 0 ? (
-          <div style={s.empty}>No trucks found</div>
+        {drivers.length === 0 ? (
+          <div style={s.empty}>No drivers found</div>
         ) : (
           <div style={s.tableCard}>
             <table style={s.table}>
               <thead>
                 <tr>
-                  <th style={s.th}>Truck Number</th>
+                  <th style={s.th}>Name</th>
+                  <th style={s.th}>Phone</th>
+                  <th style={s.th}>Email</th>
+                  <th style={s.th}>Pay Type</th>
                   <th style={s.th}>Status</th>
-                  <th style={s.th}>Notes</th>
                   <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {trucks.map((truck) => (
-                  <tr key={truck.id} style={s.tr}>
-                    <td style={s.td}>{truck.truck_number}</td>
+                {drivers.map((driver) => (
+                  <tr key={driver.id} style={s.tr}>
+                    <td style={s.td}>{driver.profiles?.name}</td>
+                    <td style={s.td}>{driver.profiles?.phone}</td>
+                    <td style={s.td}>{driver.profiles?.email}</td>
                     <td style={s.td}>
-                      <span style={s.statusBadge}>{truck.status}</span>
+                      <span style={driver.pay_type === 'per_trip' ? s.badgePerTrip : s.badgeMonthly}>{driver.pay_type}</span>
                     </td>
-                    <td style={{ ...s.td, color: 'rgba(20,20,30,0.45)' }}>{truck.notes || '—'}</td>
+                    <td style={s.td}>
+                      <span style={driver.status === 'Active' ? s.statusBadgeActive : s.statusBadgeInactive}>{driver.status}</span>
+                    </td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
-                      <button onClick={() => deleteTruck(truck.id)} style={s.deleteBtn}>
+                      <button onClick={() => deleteDriver(driver.id)} style={s.deleteBtn}>
                         Delete
                       </button>
                     </td>
@@ -175,9 +221,7 @@ export default function TrucksPage({ user, onLogout }) {
           </div>
         )}
       </div>
-
-      <Styles />
-    </div>
+    </DashboardLayout>
   );
 }
 
@@ -188,6 +232,7 @@ function Styles() {
       @keyframes spin { to { transform: rotate(360deg); } }
       input::placeholder { color: rgba(20,20,30,0.3); }
       input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
+      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
       ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
@@ -340,11 +385,38 @@ const s = {
     fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
   },
-  statusBadge: {
+  statusBadgeActive: {
     display: 'inline-block',
     background: 'rgba(34,197,94,0.1)',
     border: '1px solid rgba(34,197,94,0.25)',
     color: '#16A34A',
+    borderRadius: 20, padding: '4px 12px',
+    fontSize: 12, fontWeight: 600,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  statusBadgeInactive: {
+    display: 'inline-block',
+    background: 'rgba(107,114,128,0.1)',
+    border: '1px solid rgba(107,114,128,0.25)',
+    color: '#6B7280',
+    borderRadius: 20, padding: '4px 12px',
+    fontSize: 12, fontWeight: 600,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  badgePerTrip: {
+    display: 'inline-block',
+    background: 'rgba(124,99,255,0.1)',
+    border: '1px solid rgba(124,99,255,0.25)',
+    color: '#7C63FF',
+    borderRadius: 20, padding: '4px 12px',
+    fontSize: 12, fontWeight: 600,
+    fontFamily: "'Space Grotesk', sans-serif",
+  },
+  badgeMonthly: {
+    display: 'inline-block',
+    background: 'rgba(236,72,153,0.1)',
+    border: '1px solid rgba(236,72,153,0.25)',
+    color: '#EC4899',
     borderRadius: 20, padding: '4px 12px',
     fontSize: 12, fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",

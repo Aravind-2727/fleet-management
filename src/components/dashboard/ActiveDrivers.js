@@ -37,11 +37,11 @@ export default function ActiveDrivers({ drivers, driversLoading }) {
               <div key={driver.id} style={s.driverCard}>
                 <div style={s.driverInfo}>
                   <div style={s.driverAvatar}>
-                    {driver.name.charAt(0).toUpperCase()}
+                    {driver.profiles?.name?.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p style={s.driverName}>{driver.name}</p>
-                    <p style={s.driverPhone}>{driver.phone}</p>
+                    <p style={s.driverName}>{driver.profiles?.name}</p>
+                    <p style={s.driverPhone}>{driver.profiles?.phone}</p>
                   </div>
                 </div>
                 <span style={{ ...s.statusBadge, background: driver.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(107,114,128,0.1)', color: driver.status === 'active' ? '#22C55E' : '#6B7280' }}>

@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
-import Sidebar from '../../components/dashboard/Sidebar';
-import Header from '../../components/dashboard/Header';
 import StatsCards from '../../components/dashboard/StatsCards';
 import RecentTrips from '../../components/dashboard/RecentTrips';
 import RecentExpenses from '../../components/dashboard/RecentExpenses';
@@ -275,7 +273,7 @@ export default function Dashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('drivers')
-          .select('id, name, payment_status, total_earnings, created_at')
+          .select('id, profile_id, payment_status, total_earnings, created_at, profiles(name)')
           .eq('payment_status', 'pending')
           .order('created_at', { ascending: false })
       ]);
@@ -393,10 +391,7 @@ export default function Dashboard() {
   return (
     <div style={s.root}>
       <div style={s.shell}>
-        <Sidebar user={user} onLogout={handleLogout} />
-
         <main style={s.main}>
-          <Header user={user} onLogout={handleLogout} />
 
           <StatsCards />
 
