@@ -17,8 +17,14 @@ export default function TrucksPage({ user, onLogout }) {
   }, []);
 
   const saveTruck = async () => {
-    if (!truckNumber) {
-      alert('Enter truck number');
+    if (!truckNumber || truckNumber.trim().length < 2) {
+      alert('Enter valid truck number (at least 2 characters)');
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
       return;
     }
 
@@ -26,10 +32,10 @@ export default function TrucksPage({ user, onLogout }) {
       .from('trucks')
       .insert([
         {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          truck_number: truckNumber,
+          owner_id: authUser.id,
+          truck_number: truckNumber.trim(),
           status: 'Active',
-          notes: notes,
+          notes: notes.trim(),
         },
       ]);
 
@@ -49,6 +55,33 @@ export default function TrucksPage({ user, onLogout }) {
   };
 
   const deleteTruck = async (id) => {
+    if (!confirm('Are you sure you want to delete this truck?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: truck, error: fetchError } = await supabase
+      .from('trucks')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !truck) {
+      alert('Truck not found');
+      return;
+    }
+
+    if (truck.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this truck');
+      return;
+    }
+
     const { error } = await supabase
       .from('trucks')
       .delete()
@@ -63,12 +96,18 @@ export default function TrucksPage({ user, onLogout }) {
   };
 
   const fetchTrucks = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setTrucks([]);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('trucks')
-      .select('*');
-
-    console.log('Data:', data);
-    console.log('Error:', error);
+      .select('*')
+      .eq('owner_id', authUser.id)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error(error);
@@ -86,7 +125,14 @@ export default function TrucksPage({ user, onLogout }) {
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
           <p style={s.muted}>Loading trucks...</p>
         </div>
-        <Styles />
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+          input::placeholder { color: rgba(20,20,30,0.3); }
+          input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
+          ::-webkit-scrollbar { width: 8px; height: 8px; }
+          ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
+          ::-webkit-scrollbar-track { background: transparent; }
+        `}</style>
       </div>
     );
   }
@@ -175,20 +221,6 @@ export default function TrucksPage({ user, onLogout }) {
         )}
       </div>
     </DashboardLayout>
-  );
-}
-
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
   );
 }
 

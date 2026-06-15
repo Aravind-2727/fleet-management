@@ -9,7 +9,7 @@ export default function AdvanceStats({ summary }) {
         </div>
         <div>
           <p style={s.statsLabel}>Pending Requests</p>
-          <h3 style={s.statsValue}>{summary.pendingCount}</h3>
+          <h3 style={s.statsValue}>{summary?.pendingCount ?? 0}</h3>
         </div>
       </div>
 
@@ -19,7 +19,7 @@ export default function AdvanceStats({ summary }) {
         </div>
         <div>
           <p style={s.statsLabel}>Approved Amount</p>
-          <h3 style={s.statsValue}>${summary.approvedAmount.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>${(summary?.approvedAmount ?? 0).toLocaleString()}</h3>
         </div>
       </div>
 
@@ -29,7 +29,7 @@ export default function AdvanceStats({ summary }) {
         </div>
         <div>
           <p style={s.statsLabel}>Paid Amount</p>
-          <h3 style={s.statsValue}>${summary.paidAmount.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>${(summary?.paidAmount ?? 0).toLocaleString()}</h3>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ export default function AdvanceStats({ summary }) {
         </div>
         <div>
           <p style={s.statsLabel}>Rejected Requests</p>
-          <h3 style={s.statsValue}>{summary.rejectedCount}</h3>
+          <h3 style={s.statsValue}>{summary?.rejectedCount ?? 0}</h3>
         </div>
       </div>
     </div>

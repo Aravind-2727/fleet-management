@@ -8,15 +8,15 @@ export default function AdvanceTable({ advances, updateAdvanceStatus, deleteAdva
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
-        return s.statusPending;
+        return s.statusPending.background;
       case 'approved':
-        return s.statusApproved;
+        return s.statusApproved.background;
       case 'paid':
-        return s.statusPaid;
+        return s.statusPaid.background;
       case 'rejected':
-        return s.statusRejected;
+        return s.statusRejected.background;
       default:
-        return s.statusDefault;
+        return s.statusDefault.background;
     }
   };
 
@@ -37,7 +37,7 @@ export default function AdvanceTable({ advances, updateAdvanceStatus, deleteAdva
           {advances.map((advance) => (
             <tr key={advance.id} style={s.tr}>
               <td style={s.td}>{advance.driver_name || 'Unknown'}</td>
-              <td style={s.td}>${advance.amount.toLocaleString()}</td>
+              <td style={s.td}>${(advance.amount || 0).toLocaleString()}</td>
               <td style={s.td}>{advance.reason}</td>
               <td style={s.td}>
                 <select

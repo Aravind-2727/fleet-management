@@ -1,4 +1,5 @@
-// middleware.js
+import { supabase } from './src/app/lib/supabase';
+import { NextResponse } from 'next/server';
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
@@ -13,23 +14,24 @@ export async function middleware(request) {
   }
   
   // Check for authentication using Supabase auth
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
+  const user = data?.user;
   
   if (error || !user) {
     // No valid session, redirect to login page
     url.pathname = '/';
     return NextResponse.redirect(url);
   }
-  
+
   // User is authenticated, check user role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
   
   const userRole = profileError ? 'driver' : profile?.role || 'driver';
-  
+
   // Route-specific authorization
   const protectedRoutes = ['/dashboard', '/trips', '/trips-management', '/drivers', '/expenses', '/advances', '/settlements', '/payments', '/reports', '/settings'];
   
@@ -40,10 +42,6 @@ export async function middleware(request) {
       return NextResponse.redirect(url);
     }
   }
-  
+
   return NextResponse.next();
 }
-
-// Import supabase
-const { supabase } = require('./src/app/lib/supabase');
-const { NextResponse } = require('next/server');

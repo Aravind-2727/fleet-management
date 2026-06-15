@@ -7,13 +7,13 @@ function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, custo
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
-        return s.statusPending;
+        return s.statusPending.background;
       case 'partial':
-        return s.statusPartial;
+        return s.statusPartial.background;
       case 'paid':
-        return s.statusPaid;
+        return s.statusPaid.background;
       default:
-        return s.statusDefault;
+        return s.statusDefault.background;
     }
   };
 
@@ -40,14 +40,17 @@ function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, custo
             <tr key={payment.id} style={s.tr}>
               <td style={s.td}>{customers[payment.customer_id] || 'Unknown'}</td>
               <td style={s.td}>{trips[payment.trip_id] || 'Unknown'}</td>
-              <td style={s.td}>${payment.freight_amount.toLocaleString()}</td>
-              <td style={s.td}>${payment.amount_received.toLocaleString()}</td>
-              <td style={s.td}>${(payment.freight_amount - payment.amount_received).toLocaleString()}</td>
+              <td style={s.td}>${(payment.freight_amount || 0).toLocaleString()}</td>
+              <td style={s.td}>${(payment.amount_received || 0).toLocaleString()}</td>
+              <td style={s.td}>${((payment.freight_amount || 0) - (payment.amount_received || 0)).toLocaleString()}</td>
               <td style={s.td}>
                 <select
                   value={payment.payment_status}
                   onChange={(e) => updatePaymentStatus(payment.id, e.target.value)}
-                  style={{ ...s.statusSelect, backgroundColor: getStatusColor(payment.payment_status) }}
+                  style={{
+  ...s.statusSelect,
+  ...getStatusColor(payment.payment_status)
+}}
                 >
                   <option value="pending">Pending</option>
                   <option value="partial">Partial</option>

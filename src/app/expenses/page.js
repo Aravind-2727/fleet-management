@@ -38,16 +38,28 @@ export default function ExpensesPage({ user, onLogout }) {
       return;
     }
 
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid positive amount');
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
     setFormLoading(true);
     const { error } = await supabase
       .from('trip_expenses')
       .insert([
         {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
+          owner_id: authUser.id,
           trip_id: tripId,
           driver_id: driverId,
           category: category,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           paid_by: paidBy,
           status: 'pending',
           notes: notes,
@@ -90,6 +102,33 @@ export default function ExpensesPage({ user, onLogout }) {
   };
 
   const deleteExpense = async (id) => {
+    if (!confirm('Are you sure you want to delete this expense?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: expense, error: fetchError } = await supabase
+      .from('trip_expenses')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !expense) {
+      alert('Expense not found');
+      return;
+    }
+
+    if (expense.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this expense');
+      return;
+    }
+
     const { error } = await supabase
       .from('trip_expenses')
       .delete()
@@ -104,13 +143,18 @@ export default function ExpensesPage({ user, onLogout }) {
   };
 
   const fetchExpenses = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setExpenses([]);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('trip_expenses')
       .select('*')
+      .eq('owner_id', authUser.id)
       .order('created_at', { ascending: false });
-
-    console.log('Expenses data:', data);
-    console.log('Expenses error:', error);
 
     if (error) {
       console.error(error);
@@ -143,9 +187,16 @@ export default function ExpensesPage({ user, onLogout }) {
   };
 
   const fetchTrips = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setTrips([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('trips')
-      .select('id, customer');
+      .select('id, customer')
+      .eq('owner_id', authUser.id);
 
     if (error) {
       console.error('Error fetching trips:', error);
@@ -155,9 +206,16 @@ export default function ExpensesPage({ user, onLogout }) {
   };
 
   const fetchDrivers = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setDrivers([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, profile_id, profiles(name)');
+      .select('id, profile_id, profiles(name)')
+      .eq('owner_id', authUser.id);
 
     if (error) {
       console.error('Error fetching drivers:', error);
@@ -180,14 +238,23 @@ export default function ExpensesPage({ user, onLogout }) {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
-        return s.statusPending;
+        return s.statusPending.background;
       case 'paid':
-        return s.statusPaid;
+        return s.statusPaid.background;
       case 'approved':
-        return s.statusApproved;
+        return s.statusApproved.background;
       default:
-        return s.statusDefault;
+        return s.statusDefault.background;
     }
+  };
+
+  const validateForm = () => {
+    const amount = parseFloat(amount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid positive amount');
+      return false;
+    }
+    return true;
   };
 
   const getTripCustomer = (id) => {
@@ -378,7 +445,7 @@ export default function ExpensesPage({ user, onLogout }) {
                     <td style={s.td}>{getTripCustomer(expense.trip_id)}</td>
                     <td style={s.td}>{getDriverName(expense.driver_id)}</td>
                     <td style={s.td}>{expense.category}</td>
-                    <td style={s.td}>${expense.amount.toLocaleString()}</td>
+                    <td style={s.td}>${(expense.amount || 0).toLocaleString()}</td>
                     <td style={s.td}>
                       <span style={expense.paid_by === 'driver_paid' ? s.paidByDriver : s.paidByCompany}>
                         {expense.paid_by === 'driver_paid' ? 'Driver' : 'Company'}

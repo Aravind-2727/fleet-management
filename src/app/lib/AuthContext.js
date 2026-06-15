@@ -25,16 +25,17 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data, error } = await supabase.auth.getUser();
+        const user = data?.user;
         
         if (user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
-          if (profileError) {
+          if (profileError && profileError.code !== 'PGRST116') {
             setUserRole('driver');
           } else {
             setUserRole(profile?.role || 'driver');
@@ -62,9 +63,9 @@ export const AuthProvider = ({ children }) => {
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
 
-          if (profileError) {
+          if (profileError && profileError.code !== 'PGRST116') {
             setUserRole('driver');
           } else {
             setUserRole(profile?.role || 'driver');

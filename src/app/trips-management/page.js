@@ -4,369 +4,22 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
 
-export default function TripsManagementPage({ user, onLogout }) {
-  const [trips, setTrips] = useState([]);
-  const [trucks, setTrucks] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [formLoading, setFormLoading] = useState(false);
-
-  const [showForm, setShowForm] = useState(false);
-  const [truckId, setTruckId] = useState('');
-  const [driverId, setDriverId] = useState('');
-  const [customer, setCustomer] = useState('');
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [freightAmount, setFreightAmount] = useState('');
-  const [status, setStatus] = useState('Assigned');
-
-  useEffect(() => {
-    fetchTrips();
-    fetchTrucks();
-    fetchDrivers();
-  }, []);
-
-  const saveTrip = async () => {
-    if (!truckId || !driverId || !customer || !origin || !destination || !freightAmount) {
-      alert('Please fill all required fields');
-      return;
-    }
-
-    setFormLoading(true);
-    const { error } = await supabase
-      .from('trips')
-      .insert([
-        {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          truck_id: truckId,
-          driver_id: driverId,
-          customer: customer,
-          origin: origin,
-          destination: destination,
-          freight_amount: parseFloat(freightAmount),
-          status: status,
-        },
-      ]);
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      setFormLoading(false);
-      return;
-    }
-
-    setTruckId('');
-    setDriverId('');
-    setCustomer('');
-    setOrigin('');
-    setDestination('');
-    setFreightAmount('');
-    setStatus('Assigned');
-    setShowForm(false);
-
-    fetchTrips();
-    setFormLoading(false);
-
-    alert('Trip created successfully');
-  };
-
-  const updateTripStatus = async (id, newStatus) => {
-    const { error } = await supabase
-      .from('trips')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    fetchTrips();
-  };
-
-  const deleteTrip = async (id) => {
-    const { error } = await supabase
-      .from('trips')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    fetchTrips();
-  };
-
-  const fetchTrips = async () => {
-    const { data, error } = await supabase
-      .from('trips')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    console.log('Trips data:', data);
-    console.log('Trips error:', error);
-
-    if (error) {
-      console.error(error);
-    } else {
-      setTrips(data || []);
-    }
-
-    setLoading(false);
-  };
-
-  const fetchTrucks = async () => {
-    const { data, error } = await supabase
-      .from('trucks')
-      .select('id, truck_number, status');
-
-    if (error) {
-      console.error('Error fetching trucks:', error);
-    } else {
-      setTrucks(data || []);
-    }
-  };
-
-  const fetchDrivers = async () => {
-    const { data, error } = await supabase
-      .from('drivers')
-      .select('id, profile_id, status, profiles(name, phone)');
-
-    if (error) {
-      console.error('Error fetching drivers:', error);
-    } else {
-      setDrivers(data || []);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={s.root}>
-        <div style={s.center}>
-          <div style={s.spinnerRing}><div style={s.spinner} /></div>
-          <p style={s.muted}>Loading trips...</p>
-        </div>
-      </div>
-    );
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Assigned':
+      return s.statusAssigned.background;
+    case 'Loading':
+      return s.statusLoading.background;
+    case 'In Transit':
+      return s.statusInTransit.background;
+    case 'Unloading':
+      return s.statusUnloading.background;
+    case 'Delivered':
+      return s.statusDelivered.background;
+    default:
+      return s.statusDefault.background;
   }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Assigned':
-        return s.statusAssigned;
-      case 'Loading':
-        return s.statusLoading;
-      case 'In Transit':
-        return s.statusInTransit;
-      case 'Unloading':
-        return s.statusUnloading;
-      case 'Delivered':
-        return s.statusDelivered;
-      default:
-        return s.statusDefault;
-    }
-  };
-
-  const getTruckNumber = (id) => {
-    const truck = trucks.find(t => t.id === id);
-    return truck ? truck.truck_number : 'Unknown';
-  };
-
-  const getDriverName = (id) => {
-    const driver = drivers.find(d => d.id === id);
-    return driver ? driver.profiles?.name : 'Unknown';
-  };
-
-  return (
-    <DashboardLayout user={user} onLogout={onLogout}>
-      <div style={s.shell}>
-
-        {/* ── HEADER ── */}
-        <div style={s.header}>
-          <div>
-            <p style={s.headerSub}>Fleet</p>
-            <h1 style={s.headerTitle}>Trips Management</h1>
-          </div>
-
-          <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Create Trip
-          </button>
-        </div>
-
-        {/* ── ADD FORM ── */}
-        {showForm && (
-          <div style={s.formCard}>
-            <div style={s.shimmer} />
-            <h3 style={s.formTitle}>Create New Trip</h3>
-
-            <div style={s.field}>
-              <label style={s.label}>Truck</label>
-              <select
-                value={truckId}
-                onChange={(e) => setTruckId(e.target.value)}
-                style={s.input}
-              >
-                <option value="">Select Truck</option>
-                {trucks.map((truck) => (
-                  <option key={truck.id} value={truck.id}>
-                    {truck.truck_number} - {truck.status}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Driver</label>
-              <select
-                value={driverId}
-                onChange={(e) => setDriverId(e.target.value)}
-                style={s.input}
-              >
-                <option value="">Select Driver</option>
-                {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.profiles?.name} - {driver.status}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Customer</label>
-              <input
-                placeholder="e.g. ABC Logistics"
-                value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Origin</label>
-              <input
-                placeholder="e.g. New York, NY"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Destination</label>
-              <input
-                placeholder="e.g. Los Angeles, CA"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Freight Amount ($)</label>
-              <input
-                type="number"
-                placeholder="e.g. 5000"
-                value={freightAmount}
-                onChange={(e) => setFreightAmount(e.target.value)}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                style={s.input}
-              >
-                <option value="Assigned">Assigned</option>
-                <option value="Loading">Loading</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Unloading">Unloading</option>
-                <option value="Delivered">Delivered</option>
-              </select>
-            </div>
-
-            <div style={s.formActions}>
-              <button onClick={saveTrip} style={s.saveBtn} disabled={formLoading}>
-                {formLoading ? 'Creating...' : 'Create Trip'}
-              </button>
-              <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── TABLE ── */}
-        {trips.length === 0 ? (
-          <div style={s.empty}>No trips found</div>
-        ) : (
-          <div style={s.tableCard}>
-            <table style={s.table}>
-              <thead>
-                <tr>
-                  <th style={s.th}>Trip ID</th>
-                  <th style={s.th}>Truck</th>
-                  <th style={s.th}>Driver</th>
-                  <th style={s.th}>Customer</th>
-                  <th style={s.th}>Route</th>
-                  <th style={s.th}>Freight Amount</th>
-                  <th style={s.th}>Status</th>
-                  <th style={s.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trips.map((trip) => (
-                  <tr key={trip.id} style={s.tr}>
-                    <td style={s.td}>{trip.id.substring(0, 8)}...</td>
-                    <td style={s.td}>{getTruckNumber(trip.truck_id)}</td>
-                    <td style={s.td}>{getDriverName(trip.driver_id)}</td>
-                    <td style={s.td}>{trip.customer}</td>
-                    <td style={s.td}>{trip.origin} → {trip.destination}</td>
-                    <td style={s.td}>${trip.freight_amount.toLocaleString()}</td>
-                    <td style={s.td}>
-                      <select
-                        value={trip.status}
-                        onChange={(e) => updateTripStatus(trip.id, e.target.value)}
-                        style={{ ...s.statusSelect, backgroundColor: getStatusColor(trip.status) }}
-                      >
-                        <option value="Assigned">Assigned</option>
-                        <option value="Loading">Loading</option>
-                        <option value="In Transit">In Transit</option>
-                        <option value="Unloading">Unloading</option>
-                        <option value="Delivered">Delivered</option>
-                      </select>
-                    </td>
-                    <td style={{ ...s.td, textAlign: 'right' }}>
-                      <button onClick={() => deleteTrip(trip.id)} style={s.deleteBtn}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
-  );
-}
-
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
-  );
-}
+};
 
 const s = {
   root: {
@@ -569,3 +222,388 @@ const s = {
     color: '#6B7280',
   },
 };
+
+export default function TripsManagementPage({ user, onLogout }) {
+  const [trips, setTrips] = useState([]);
+  const [trucks, setTrucks] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
+
+  const [showForm, setShowForm] = useState(false);
+  const [truckId, setTruckId] = useState('');
+  const [driverId, setDriverId] = useState('');
+  const [customer, setCustomer] = useState('');
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [freightAmount, setFreightAmount] = useState('');
+  const [status, setStatus] = useState('Assigned');
+
+  useEffect(() => {
+    fetchTrips();
+    fetchTrucks();
+    fetchDrivers();
+  }, []);
+
+  const saveTrip = async () => {
+    if (!truckId || !driverId || !customer || !origin || !destination || !freightAmount) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    const amount = parseFloat(freightAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid positive freight amount');
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      setFormLoading(false);
+      return;
+    }
+
+    setFormLoading(true);
+    const { error } = await supabase
+      .from('trips')
+      .insert([
+        {
+          owner_id: authUser.id,
+          truck_id: truckId,
+          driver_id: driverId,
+          customer: customer.trim(),
+          origin: origin.trim(),
+          destination: destination.trim(),
+          freight_amount: amount,
+          status: status,
+        },
+      ]);
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      setFormLoading(false);
+      return;
+    }
+
+    setTruckId('');
+    setDriverId('');
+    setCustomer('');
+    setOrigin('');
+    setDestination('');
+    setFreightAmount('');
+    setStatus('Assigned');
+    setShowForm(false);
+
+    fetchTrips();
+    setFormLoading(false);
+
+    alert('Trip created successfully');
+  };
+
+  const updateTripStatus = async (id, newStatus) => {
+    const { error } = await supabase
+      .from('trips')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    fetchTrips();
+  };
+
+  const deleteTrip = async (id) => {
+    if (!confirm('Are you sure you want to delete this trip?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: trip, error: fetchError } = await supabase
+      .from('trips')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !trip) {
+      alert('Trip not found');
+      return;
+    }
+
+    if (trip.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this trip');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('trips')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    fetchTrips();
+  };
+
+  const fetchTrips = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setTrips([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('trips')
+      .select('*')
+      .eq('owner_id', authUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setTrips(data || []);
+    }
+
+    setLoading(false);
+  };
+
+  const fetchTrucks = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    const { data, error } = await supabase
+      .from('trucks')
+      .select('id, truck_number, status')
+      .eq('owner_id', authUser.id);
+
+    if (error) {
+      console.error('Error fetching trucks:', error);
+    } else {
+      setTrucks(data || []);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    const { data, error } = await supabase
+      .from('drivers')
+      .select('id, profile_id, status, profiles(name, phone)')
+      .eq('owner_id', authUser.id);
+
+    if (error) {
+      console.error('Error fetching drivers:', error);
+    } else {
+      setDrivers(data || []);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={s.root}>
+        <div style={s.center}>
+          <div style={s.spinnerRing}><div style={s.spinner} /></div>
+          <p style={s.muted}>Loading trips...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getTruckNumber = (id) => {
+    const truck = trucks.find(t => t.id === id);
+    return truck ? truck.truck_number : 'Unknown';
+  };
+
+  const getDriverName = (id) => {
+    const driver = drivers.find(d => d.id === id);
+    return driver ? driver.profiles?.name : 'Unknown';
+  };
+
+  return (
+    <DashboardLayout user={user} onLogout={onLogout}>
+      <div style={s.shell}>
+
+        {/* ── HEADER ── */}
+        <div style={s.header}>
+          <div>
+            <p style={s.headerSub}>Fleet</p>
+            <h1 style={s.headerTitle}>Trips Management</h1>
+          </div>
+
+          <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Create Trip
+          </button>
+        </div>
+
+        {/* ── ADD FORM ── */}
+        {showForm && (
+          <div style={s.formCard}>
+            <div style={s.shimmer} />
+            <h3 style={s.formTitle}>Create New Trip</h3>
+
+            <div style={s.field}>
+              <label style={s.label}>Truck</label>
+              <select
+                value={truckId}
+                onChange={(e) => setTruckId(e.target.value)}
+                style={s.input}
+              >
+                <option value="">Select Truck</option>
+                {trucks.map((truck) => (
+                  <option key={truck.id} value={truck.id}>
+                    {truck.truck_number} - {truck.status}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Driver</label>
+              <select
+                value={driverId}
+                onChange={(e) => setDriverId(e.target.value)}
+                style={s.input}
+              >
+                <option value="">Select Driver</option>
+                {drivers.map((driver) => (
+                  <option key={driver.id} value={driver.id}>
+                    {driver.profiles?.name} - {driver.status}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Customer</label>
+              <input
+                placeholder="e.g. ABC Logistics"
+                value={customer}
+                onChange={(e) => setCustomer(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Origin</label>
+              <input
+                placeholder="e.g. New York, NY"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Destination</label>
+              <input
+                placeholder="e.g. Los Angeles, CA"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Freight Amount ($)</label>
+              <input
+                type="number"
+                placeholder="e.g. 5000"
+                value={freightAmount}
+                onChange={(e) => setFreightAmount(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={s.input}
+              >
+                <option value="Assigned">Assigned</option>
+                <option value="Loading">Loading</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Unloading">Unloading</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+
+            <div style={s.formActions}>
+              <button onClick={saveTrip} style={s.saveBtn} disabled={formLoading}>
+                {formLoading ? 'Creating...' : 'Create Trip'}
+              </button>
+              <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── TABLE ── */}
+        {trips.length === 0 ? (
+          <div style={s.empty}>No trips found</div>
+        ) : (
+          <div style={s.tableCard}>
+            <table style={s.table}>
+              <thead>
+                <tr>
+                  <th style={s.th}>Trip ID</th>
+                  <th style={s.th}>Truck</th>
+                  <th style={s.th}>Driver</th>
+                  <th style={s.th}>Customer</th>
+                  <th style={s.th}>Route</th>
+                  <th style={s.th}>Freight Amount</th>
+                  <th style={s.th}>Status</th>
+                  <th style={s.th}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trips.map((trip) => (
+                  <tr key={trip.id} style={s.tr}>
+                    <td style={s.td}>{trip.id.substring(0, 8)}...</td>
+                    <td style={s.td}>{getTruckNumber(trip.truck_id)}</td>
+                    <td style={s.td}>{getDriverName(trip.driver_id)}</td>
+                    <td style={s.td}>{trip.customer}</td>
+                    <td style={s.td}>{trip.origin} → {trip.destination}</td>
+                    <td style={s.td}>${(trip.freight_amount || 0).toLocaleString()}</td>
+                    <td style={s.td}>
+                      <select
+                        value={trip.status}
+                        onChange={(e) => updateTripStatus(trip.id, e.target.value)}
+                        style={{ ...s.statusSelect, backgroundColor: getStatusColor(trip.status) }}
+                      >
+                        <option value="Assigned">Assigned</option>
+                        <option value="Loading">Loading</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Unloading">Unloading</option>
+                        <option value="Delivered">Delivered</option>
+                      </select>
+                    </td>
+                    <td style={{ ...s.td, textAlign: 'right' }}>
+                      <button onClick={() => deleteTrip(trip.id)} style={s.deleteBtn}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}

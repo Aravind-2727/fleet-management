@@ -2,198 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import Sidebar from '../../components/dashboard/Sidebar';
-import Header from '../../components/dashboard/Header';
-
-export default function TrucksPage({ user, onLogout }) {
-  const [trucks, setTrucks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [showForm, setShowForm] = useState(false);
-  const [truckNumber, setTruckNumber] = useState('');
-  const [notes, setNotes] = useState('');
-
-  useEffect(() => {
-    fetchTrucks();
-  }, []);
-
-  const saveTruck = async () => {
-    if (!truckNumber) {
-      alert('Enter truck number');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('trucks')
-      .insert([
-        {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          truck_number: truckNumber,
-          status: 'Active',
-          notes: notes,
-        },
-      ]);
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      return;
-    }
-
-    setTruckNumber('');
-    setNotes('');
-    setShowForm(false);
-
-    fetchTrucks();
-
-    alert('Truck added successfully');
-  };
-
-  const deleteTruck = async (id) => {
-    const { error } = await supabase
-      .from('trucks')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    fetchTrucks();
-  };
-
-  const fetchTrucks = async () => {
-    const { data, error } = await supabase
-      .from('trucks')
-      .select('*');
-
-    console.log('Data:', data);
-    console.log('Error:', error);
-
-    if (error) {
-      console.error(error);
-    } else {
-      setTrucks(data || []);
-    }
-
-    setLoading(false);
-  };
-
-  if (loading) {
-    return (
-      <div style={s.root}>
-        <div style={s.center}>
-          <div style={s.spinnerRing}><div style={s.spinner} /></div>
-          <p style={s.muted}>Loading trucks...</p>
-        </div>
-        <Styles />
-      </div>
-    );
-  }
-
-  return (
-    <div style={s.root}>
-      <div style={s.shell}>
-
-        {/* ── HEADER ── */}
-        <div style={s.header}>
-          <div>
-            <p style={s.headerSub}>Fleet</p>
-            <h1 style={s.headerTitle}>Trucks Management</h1>
-          </div>
-
-          <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Truck
-          </button>
-        </div>
-
-        {/* ── ADD FORM ── */}
-        {showForm && (
-          <div style={s.formCard}>
-            <div style={s.shimmer} />
-            <h3 style={s.formTitle}>Add New Truck</h3>
-
-            <div style={s.field}>
-              <label style={s.label}>Truck Number</label>
-              <input
-                placeholder="e.g. TS09 AB 1234"
-                value={truckNumber}
-                onChange={(e) => setTruckNumber(e.target.value)}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.field}>
-              <label style={s.label}>Notes</label>
-              <input
-                placeholder="Optional notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.formActions}>
-              <button onClick={saveTruck} style={s.saveBtn}>Save Truck</button>
-              <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── TABLE ── */}
-        {trucks.length === 0 ? (
-          <div style={s.empty}>No trucks found</div>
-        ) : (
-          <div style={s.tableCard}>
-            <table style={s.table}>
-              <thead>
-                <tr>
-                  <th style={s.th}>Truck Number</th>
-                  <th style={s.th}>Status</th>
-                  <th style={s.th}>Notes</th>
-                  <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trucks.map((truck) => (
-                  <tr key={truck.id} style={s.tr}>
-                    <td style={s.td}>{truck.truck_number}</td>
-                    <td style={s.td}>
-                      <span style={s.statusBadge}>{truck.status}</span>
-                    </td>
-                    <td style={{ ...s.td, color: 'rgba(20,20,30,0.45)' }}>{truck.notes || '—'}</td>
-                    <td style={{ ...s.td, textAlign: 'right' }}>
-                      <button onClick={() => deleteTruck(truck.id)} style={s.deleteBtn}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <Styles />
-    </div>
-  );
-}
-
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
-  );
-}
 
 const s = {
   root: {
@@ -358,3 +166,204 @@ const s = {
     fontFamily: "'Outfit', sans-serif",
   },
 };
+
+export default function TrucksPage({ user, onLogout }) {
+  const [trucks, setTrucks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showForm, setShowForm] = useState(false);
+  const [truckNumber, setTruckNumber] = useState('');
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    fetchTrucks();
+  }, []);
+
+  const saveTruck = async () => {
+    if (!truckNumber || truckNumber.trim().length < 2) {
+      alert('Enter valid truck number (at least 2 characters)');
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('trucks')
+      .insert([
+        {
+          owner_id: authUser.id,
+          truck_number: truckNumber.trim(),
+          status: 'Active',
+          notes: notes.trim(),
+        },
+      ]);
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    setTruckNumber('');
+    setNotes('');
+    setShowForm(false);
+
+    fetchTrucks();
+
+    alert('Truck added successfully');
+  };
+
+  const deleteTruck = async (id) => {
+    if (!confirm('Are you sure you want to delete this truck?')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('trucks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    fetchTrucks();
+  };
+
+  const fetchTrucks = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setTrucks([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('trucks')
+      .select('*')
+      .eq('owner_id', authUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setTrucks(data || []);
+    }
+
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div style={s.root}>
+        <div style={s.center}>
+          <div style={s.spinnerRing}><div style={s.spinner} /></div>
+          <p style={s.muted}>Loading trucks...</p>
+        </div>
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div style={s.root}>
+      <div style={s.shell}>
+
+        {/* ── HEADER ── */}
+        <div style={s.header}>
+          <div>
+            <p style={s.headerSub}>Fleet</p>
+            <h1 style={s.headerTitle}>Trucks Management</h1>
+          </div>
+
+          <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Truck
+          </button>
+        </div>
+
+        {/* ── ADD FORM ── */}
+        {showForm && (
+          <div style={s.formCard}>
+            <div style={s.shimmer} />
+            <h3 style={s.formTitle}>Add New Truck</h3>
+
+            <div style={s.field}>
+              <label style={s.label}>Truck Number</label>
+              <input
+                placeholder="e.g. TS09 AB 1234"
+                value={truckNumber}
+                onChange={(e) => setTruckNumber(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.field}>
+              <label style={s.label}>Notes</label>
+              <input
+                placeholder="Optional notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                style={s.input}
+              />
+            </div>
+
+            <div style={s.formActions}>
+              <button onClick={saveTruck} style={s.saveBtn}>Save Truck</button>
+              <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── TABLE ── */}
+        {trucks.length === 0 ? (
+          <div style={s.empty}>No trucks found</div>
+        ) : (
+          <div style={s.tableCard}>
+            <table style={s.table}>
+              <thead>
+                <tr>
+                  <th style={s.th}>Truck Number</th>
+                  <th style={s.th}>Status</th>
+                  <th style={s.th}>Notes</th>
+                  <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trucks.map((truck) => (
+                  <tr key={truck.id} style={s.tr}>
+                    <td style={s.td}>{truck.truck_number}</td>
+                    <td style={s.td}>
+                      <span style={s.statusBadge}>{truck.status}</span>
+                    </td>
+                    <td style={{ ...s.td, color: 'rgba(20,20,30,0.45)' }}>{truck.notes || '—'}</td>
+                    <td style={{ ...s.td, textAlign: 'right' }}>
+                      <button onClick={() => deleteTruck(truck.id)} style={s.deleteBtn}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input::placeholder { color: rgba(20,20,30,0.3); }
+        input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+      `}</style>
+    </div>
+  );
+}

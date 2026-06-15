@@ -32,9 +32,17 @@ export default function PaymentsPage({ user, onLogout }) {
   }, []);
 
   const fetchPayments = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setPayments([]);
+      setLoading(false);
+      return;
+    }
+
     let query = supabase
-      .from('payments')
+      .from('customer_payments')
       .select('*')
+      .eq('owner_id', authUser.id)
       .order('created_at', { ascending: false });
 
     if (filterCustomer) {
@@ -46,9 +54,6 @@ export default function PaymentsPage({ user, onLogout }) {
     }
 
     const { data, error } = await query;
-
-    console.log('Payments data:', data);
-    console.log('Payments error:', error);
 
     if (error) {
       console.error(error);
@@ -81,19 +86,41 @@ export default function PaymentsPage({ user, onLogout }) {
   };
 
   const savePayment = async (customerId, tripId, freightAmount, amountReceived, paymentStatus) => {
+    if (!customerId || !tripId || !freightAmount) {
+      alert('Please fill all required fields');
+      setFormLoading(false);
+      return;
+    }
+
+    const parsedFreight = parseFloat(freightAmount);
+    const parsedReceived = parseFloat(amountReceived) || 0;
+
+    if (isNaN(parsedFreight) || parsedFreight <= 0) {
+      alert('Please enter a valid freight amount');
+      setFormLoading(false);
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      setFormLoading(false);
+      return;
+    }
+
     setFormLoading(true);
 
     const { error } = await supabase
-      .from('payments')
+      .from('customer_payments')
       .insert([
         {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
+          owner_id: authUser.id,
           customer_id: customerId,
           trip_id: tripId,
-          freight_amount: freightAmount,
-          amount_received: amountReceived,
+          freight_amount: parsedFreight,
+          amount_received: parsedReceived,
           payment_status: paymentStatus,
-          pending_amount: freightAmount - amountReceived,
+          pending_amount: parsedFreight - parsedReceived,
           due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         },
       ]);
@@ -122,7 +149,7 @@ export default function PaymentsPage({ user, onLogout }) {
     }
 
     const { error } = await supabase
-      .from('payments')
+      .from('customer_payments')
       .update(updates)
       .eq('id', id);
 
@@ -135,8 +162,35 @@ export default function PaymentsPage({ user, onLogout }) {
   };
 
   const deletePayment = async (id) => {
+    if (!confirm('Are you sure you want to delete this payment?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: payment, error: fetchError } = await supabase
+      .from('customer_payments')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !payment) {
+      alert('Payment not found');
+      return;
+    }
+
+    if (payment.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this payment');
+      return;
+    }
+
     const { error } = await supabase
-      .from('payments')
+      .from('customer_payments')
       .delete()
       .eq('id', id);
 

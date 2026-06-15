@@ -30,9 +30,17 @@ export default function SettlementsPage({ user, onLogout }) {
   }, []);
 
   const fetchSettlements = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setSettlements([]);
+      setLoading(false);
+      return;
+    }
+
     let query = supabase
       .from('settlements')
       .select('*')
+      .eq('owner_id', authUser.id)
       .order('created_at', { ascending: false });
 
     if (filterDriver) {
@@ -44,9 +52,6 @@ export default function SettlementsPage({ user, onLogout }) {
     }
 
     const { data, error } = await query;
-
-    console.log('Settlements data:', data);
-    console.log('Settlements error:', error);
 
     if (error) {
       console.error(error);
@@ -78,19 +83,31 @@ export default function SettlementsPage({ user, onLogout }) {
   };
 
   const saveSettlement = async (driverId, tripId, paymentMode, calculation) => {
+    if (!calculation) {
+      alert('No calculation data available');
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      setFormLoading(false);
+      return;
+    }
+
     setFormLoading(true);
 
     const { error } = await supabase
       .from('settlements')
       .insert([
         {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
+          owner_id: authUser.id,
           driver_id: driverId,
           trip_id: tripId,
-          earnings: calculation.earnings,
-          reimbursable_expenses: calculation.expenses,
-          advances_deducted: calculation.advances,
-          net_payable: calculation.netPayable,
+          earnings: calculation.earnings || 0,
+          reimbursable_expenses: calculation.expenses || 0,
+          advances_deducted: calculation.advances || 0,
+          net_payable: calculation.netPayable || 0,
           payment_mode: paymentMode,
           payment_status: 'pending',
           payment_date: null,
@@ -135,6 +152,33 @@ export default function SettlementsPage({ user, onLogout }) {
   };
 
   const deleteSettlement = async (id) => {
+    if (!confirm('Are you sure you want to delete this settlement?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: settlement, error: fetchError } = await supabase
+      .from('settlements')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !settlement) {
+      alert('Settlement not found');
+      return;
+    }
+
+    if (settlement.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this settlement');
+      return;
+    }
+
     const { error } = await supabase
       .from('settlements')
       .delete()
@@ -149,9 +193,16 @@ export default function SettlementsPage({ user, onLogout }) {
   };
 
   const fetchDrivers = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setDrivers([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, profile_id, profiles(name)');
+      .select('id, profile_id, profiles(name)')
+      .eq('owner_id', authUser.id);
 
     if (error) {
       console.error('Error fetching drivers:', error);
@@ -161,9 +212,16 @@ export default function SettlementsPage({ user, onLogout }) {
   };
 
   const fetchTrips = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setTrips([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('trips')
-      .select('id, customer, driver_id, freight_amount');
+      .select('id, customer, driver_id, freight_amount')
+      .eq('owner_id', authUser.id);
 
     if (error) {
       console.error('Error fetching trips:', error);

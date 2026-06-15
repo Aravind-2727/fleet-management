@@ -31,25 +31,34 @@ export default function AdvancesPage({ user, onLogout }) {
   }, []);
 
   const saveAdvance = async () => {
-    if (!driverId || !amount || !reason) {
-      alert('Please fill all required fields');
-      return;
-    }
+  if (!driverId || !amount || !reason) {
+    alert('Please fill all required fields');
+    return;
+  }
 
-    setFormLoading(true);
-    const { error } = await supabase
-      .from('advance_requests')
-      .insert([
-        {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          driver_id: driverId,
-          amount: parseFloat(amount),
-          reason: reason,
-          status: 'pending',
-          requested_date: new Date().toISOString(),
-        },
-      ]);
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
+  if (!user) {
+    alert('User not authenticated');
+    return;
+  }
+
+  setFormLoading(true);
+
+  const { error } = await supabase
+    .from('advance_requests')
+    .insert([
+      {
+        owner_id: user.id,
+        driver_id: driverId,
+        amount: parseFloat(amount),
+        reason: reason,
+        status: 'pending',
+        requested_date: new Date().toISOString(),
+      },
+    ]);
     if (error) {
       console.error(error);
       alert(error.message);
@@ -103,6 +112,33 @@ export default function AdvancesPage({ user, onLogout }) {
   };
 
   const deleteAdvance = async (id) => {
+    if (!confirm('Are you sure you want to delete this advance request?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: advance, error: fetchError } = await supabase
+      .from('advance_requests')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !advance) {
+      alert('Advance request not found');
+      return;
+    }
+
+    if (advance.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this advance request');
+      return;
+    }
+
     const { error } = await supabase
       .from('advance_requests')
       .delete()
@@ -116,11 +152,21 @@ export default function AdvancesPage({ user, onLogout }) {
     fetchAdvances();
   };
 
-  const fetchAdvances = async () => {
-    const { data, error } = await supabase
-      .from('advance_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
+const fetchAdvances = async () => {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setLoading(false);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('advance_requests')
+    .select('*')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false });
 
     console.log('Advances data:', data);
     console.log('Advances error:', error);
@@ -153,17 +199,26 @@ export default function AdvancesPage({ user, onLogout }) {
     });
   };
 
-  const fetchDrivers = async () => {
-    const { data, error } = await supabase
-      .from('drivers')
-      .select('*');
+ const fetchDrivers = async () => {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-    if (error) {
-      console.error('Error fetching drivers:', error);
-    } else {
-      setDrivers(data || []);
-    }
-  };
+  if (!user) return;
+
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('*')
+    .eq('owner_id', user.id);
+
+  if (error) {
+    console.error('Error fetching drivers:', error);
+  } else {
+    setDrivers(data || []);
+  }
+};
+
+    
 
   if (loading) {
     return (
@@ -221,8 +276,8 @@ export default function AdvancesPage({ user, onLogout }) {
       </div>
     </DashboardLayout>
   );
-}
 
+}
 function Styles() {
   return (
     <style>{`

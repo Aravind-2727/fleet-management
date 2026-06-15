@@ -9,6 +9,7 @@ function SettlementFormInner({
   settlements,
   formLoading,
   saveSettlement,
+    setShowForm,
 }) {
   const [driverId, setDriverId] = useState('');
   const [tripId, setTripId] = useState('');
@@ -177,7 +178,16 @@ export default function SettlementForm({
 }) {
   if (!showForm) return null;
 
-  return <SettlementFormInner drivers={drivers} trips={trips} settlements={settlements} formLoading={formLoading} saveSettlement={saveSettlement} />;
+ return (
+  <SettlementFormInner
+    drivers={drivers}
+    trips={trips}
+    settlements={settlements}
+    formLoading={formLoading}
+    saveSettlement={saveSettlement}
+    setShowForm={setShowForm}
+  />
+);
 }
 
 const s = {

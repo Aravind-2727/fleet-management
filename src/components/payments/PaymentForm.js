@@ -9,6 +9,7 @@ function PaymentFormInner({
   payments,
   formLoading,
   savePayment,
+   setShowForm,
 }) {
   const [customerId, setCustomerId] = useState('');
   const [tripId, setTripId] = useState('');
@@ -185,7 +186,16 @@ export default function PaymentForm({
 }) {
   if (!showForm) return null;
 
-  return <PaymentFormInner customers={customers} trips={trips} payments={payments} formLoading={formLoading} savePayment={savePayment} />;
+ return (
+  <PaymentFormInner
+    customers={customers}
+    trips={trips}
+    payments={payments}
+    formLoading={formLoading}
+    savePayment={savePayment}
+    setShowForm={setShowForm}
+  />
+);
 }
 
 const s = {

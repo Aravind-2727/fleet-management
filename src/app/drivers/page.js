@@ -19,9 +19,30 @@ export default function DriversPage({ user, onLogout }) {
     fetchDrivers();
   }, []);
 
+  const validateForm = () => {
+    if (!name || name.trim().length < 2) {
+      alert('Enter valid driver name (at least 2 characters)');
+      return false;
+    }
+    if (phone && !/^[\d\s\-\+\(\)]+$/.test(phone)) {
+      alert('Enter valid phone number');
+      return false;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert('Enter valid email address');
+      return false;
+    }
+    return true;
+  };
+
   const saveDriver = async () => {
-    if (!name) {
-      alert('Enter driver name');
+    if (!validateForm()) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
       return;
     }
 
@@ -29,10 +50,10 @@ export default function DriversPage({ user, onLogout }) {
       .from('drivers')
       .insert([
         {
-          owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          name: name,
-          phone: phone,
-          email: email,
+          owner_id: authUser.id,
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
           pay_type: payType,
           status: status,
         },
@@ -57,6 +78,33 @@ export default function DriversPage({ user, onLogout }) {
   };
 
   const deleteDriver = async (id) => {
+    if (!confirm('Are you sure you want to delete this driver?')) {
+      return;
+    }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      alert('Not authenticated. Please login again.');
+      return;
+    }
+
+    // Verify ownership before delete
+    const { data: driver, error: fetchError } = await supabase
+      .from('drivers')
+      .select('owner_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError || !driver) {
+      alert('Driver not found');
+      return;
+    }
+
+    if (driver.owner_id !== authUser.id) {
+      alert('Unauthorized to delete this driver');
+      return;
+    }
+
     const { error } = await supabase
       .from('drivers')
       .delete()
@@ -71,12 +119,18 @@ export default function DriversPage({ user, onLogout }) {
   };
 
   const fetchDrivers = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setDrivers([]);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, profile_id, status, profiles(name, phone, email)');
-
-    console.log('Data:', data);
-    console.log('Error:', error);
+      .select('id, profile_id, status, profiles(name, phone, email)')
+      .eq('owner_id', authUser.id)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error(error);
@@ -200,9 +254,9 @@ export default function DriversPage({ user, onLogout }) {
               <tbody>
                 {drivers.map((driver) => (
                   <tr key={driver.id} style={s.tr}>
-                    <td style={s.td}>{driver.profiles?.name}</td>
-                    <td style={s.td}>{driver.profiles?.phone}</td>
-                    <td style={s.td}>{driver.profiles?.email}</td>
+                    <td style={s.td}>{driver.profiles?.name || 'Unknown'}</td>
+                    <td style={s.td}>{driver.profiles?.phone || '—'}</td>
+                    <td style={s.td}>{driver.profiles?.email || '—'}</td>
                     <td style={s.td}>
                       <span style={driver.pay_type === 'per_trip' ? s.badgePerTrip : s.badgeMonthly}>{driver.pay_type}</span>
                     </td>
@@ -222,21 +276,6 @@ export default function DriversPage({ user, onLogout }) {
         )}
       </div>
     </DashboardLayout>
-  );
-}
-
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
   );
 }
 

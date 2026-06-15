@@ -7,13 +7,13 @@ function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettl
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
-        return s.statusPending;
+        return s.statusPending.background;
       case 'paid':
-        return s.statusPaid;
+        return s.statusPaid.background;
       case 'processing':
-        return s.statusProcessing;
+        return s.statusProcessing.background;
       default:
-        return s.statusDefault;
+        return s.statusDefault.background;
     }
   };
 
@@ -42,12 +42,12 @@ function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettl
             <tr key={settlement.id} style={s.tr}>
               <td style={s.td}>{drivers[settlement.driver_id] || 'Unknown'}</td>
               <td style={s.td}>{trips[settlement.trip_id] || 'Unknown'}</td>
-              <td style={s.td}>${settlement.earnings.toLocaleString()}</td>
-              <td style={s.td}>${settlement.reimbursable_expenses.toLocaleString()}</td>
-              <td style={s.td}>${settlement.advances_deducted.toLocaleString()}</td>
+              <td style={s.td}>${(settlement.earnings || 0).toLocaleString()}</td>
+              <td style={s.td}>${(settlement.reimbursable_expenses || 0).toLocaleString()}</td>
+              <td style={s.td}>${(settlement.advances_deducted || 0).toLocaleString()}</td>
               <td style={s.td}>
-                <span style={{ fontWeight: 600, color: settlement.net_payable >= 0 ? '#22C55E' : '#E0524A' }}>
-                  ${Math.abs(settlement.net_payable).toLocaleString()}
+                <span style={{ fontWeight: 600, color: (settlement.net_payable || 0) >= 0 ? '#22C55E' : '#E0524A' }}>
+                  ${Math.abs(settlement.net_payable || 0).toLocaleString()}
                 </span>
               </td>
               <td style={s.td}>{settlement.payment_mode}</td>
@@ -55,7 +55,10 @@ function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettl
                 <select
                   value={settlement.payment_status}
                   onChange={(e) => updateSettlementStatus(settlement.id, e.target.value)}
-                  style={{ ...s.statusSelect, backgroundColor: getStatusColor(settlement.payment_status) }}
+                 style={{
+  ...s.statusSelect,
+  ...getStatusColor(settlement.payment_status)
+}}
                 >
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
@@ -82,6 +85,11 @@ export default function SettlementTable({ settlements, updateSettlementStatus, d
   const fetchDriversAndTrips = async () => {
     const driverIds = [...new Set(settlements.map(s => s.driver_id))];
     const tripIds = [...new Set(settlements.map(s => s.trip_id))];
+
+    // Guard against empty arrays - .in() with empty array causes error
+    if (driverIds.length === 0 && tripIds.length === 0) {
+      return;
+    }
 
     if (driverIds.length > 0) {
       const { data: driversData, error: driversError } = await supabase

@@ -65,9 +65,12 @@ export default function ReportsPage({ user, onLogout }) {
 
   const fetchFiltersData = async () => {
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
       const [driversResponse, trucksResponse] = await Promise.all([
-        supabase.from('drivers').select('id, profiles(name)').limit(50),
-        supabase.from('trucks').select('id, truck_number').limit(50),
+        supabase.from('drivers').select('id, profiles(name)').eq('owner_id', authUser.id).limit(50),
+        supabase.from('trucks').select('id, truck_number').eq('owner_id', authUser.id).limit(50),
       ]);
 
       setDrivers(driversResponse.data || []);
@@ -80,9 +83,17 @@ export default function ReportsPage({ user, onLogout }) {
   const fetchTripData = async () => {
     setLoading(true);
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setTripData([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('trips')
         .select('*')
+        .eq('owner_id', authUser.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -101,9 +112,17 @@ export default function ReportsPage({ user, onLogout }) {
   const fetchExpenseData = async () => {
     setLoading(true);
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setExpenseData([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('trip_expenses')
         .select('*')
+        .eq('owner_id', authUser.id)
         .order('expense_date', { ascending: false });
 
       if (error) {
@@ -122,9 +141,17 @@ export default function ReportsPage({ user, onLogout }) {
   const fetchSettlementData = async () => {
     setLoading(true);
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setSettlementData([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('settlements')
         .select('*')
+        .eq('owner_id', authUser.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -143,9 +170,17 @@ export default function ReportsPage({ user, onLogout }) {
   const fetchPaymentData = async () => {
     setLoading(true);
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setPaymentData([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('customer_payments')
         .select('*')
+        .eq('owner_id', authUser.id)
         .order('created_at', { ascending: false });
 
       if (error) {
