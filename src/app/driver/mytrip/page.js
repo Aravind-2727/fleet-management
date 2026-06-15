@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../lib/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function MyTrip() {
   const { user } = useAuth();
@@ -15,10 +16,9 @@ export default function MyTrip() {
     if (!user) return;
 
     const fetchAssignedTrip = async () => {
-      const { data, error } = await supabase
+       const { data, error } = await supabase
         .from('trips')
         .select('id, status, route, customer_name, truck_name, start_location, end_location, created_at')
-        .eq('driver_id', data?.id) // will be replaced with subquery
         .eq('status', 'assigned')
         .single();
 
@@ -108,19 +108,19 @@ export default function MyTrip() {
       <p><strong>Current Status:</strong> {trip.status}</p>
 
       {canUpdateStatus ? (
-        <button
-          onClick={updateStatus}
-          style={{
-            background: '#7C63FF',
-            color: '#fff',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          {nextStatus.charAt(0).toUpperCase() + nextStatus.charAt(1)}
-        </button>
+           <button
+             onClick={updateStatus}
+             style={{
+               background: '#7C63FF',
+               color: '#fff',
+               border: 'none',
+               padding: '8px 16px',
+               borderRadius: '4px',
+               cursor: 'pointer'
+             }}
+           >
+             {nextStatus}
+           </button>
       ) : (
         <p>Trip completed.</p>
       )}

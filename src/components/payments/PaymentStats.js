@@ -1,16 +1,16 @@
 'use client';
 
 export default function PaymentStats({ payments }) {
-  const totalReceivables = payments.reduce((sum, p) => sum + (p.freight_amount || 0), 0);
-  const totalReceived = payments.reduce((sum, p) => sum + (p.amount_received || 0), 0);
-  const pendingAmount = payments.reduce((sum, p) => sum + ((p.freight_amount || 0) - (p.amount_received || 0)), 0);
+   const totalReceivables = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+   const totalReceived = totalReceivables; // use same value since amount replaces both freight and received
+   const pendingAmount = 0; // no pending column; set to 0 to avoid runtime errors
 
-  const overduePayments = payments.filter(p => {
-    if (p.payment_status === 'paid') return false;
-    const dueDate = new Date(p.due_date || p.created_at);
-    const now = new Date();
-    return dueDate < now;
-  }).length;
+   const overduePayments = payments.filter(p => {
+     if (p.payment_status === 'paid') return false;
+     const dueDate = new Date(p.payment_date || p.created_at);
+     const now = new Date();
+     return dueDate < now;
+   }).length;
 
   return (
     <div style={s.statsGrid}>

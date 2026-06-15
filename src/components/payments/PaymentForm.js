@@ -4,119 +4,48 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 
 function PaymentFormInner({
-  customers,
   trips,
   payments,
   formLoading,
   savePayment,
-   setShowForm,
+  setShowForm,
 }) {
-  const [customerId, setCustomerId] = useState('');
   const [tripId, setTripId] = useState('');
-  const [freightAmount, setFreightAmount] = useState('');
-  const [amountReceived, setAmountReceived] = useState('');
+  const [amount, setAmount] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('pending');
 
   const selectedTrip = trips.find(t => t.id === tripId);
-  const selectedCustomer = customers.find(c => c.id === customerId);
-
-  const calculatePayment = () => {
-    if (!freightAmount) return null;
-
-    const freight = parseFloat(freightAmount) || 0;
-    const received = parseFloat(amountReceived) || 0;
-    const pending = freight - received;
-
-    let status = 'pending';
-    if (received >= freight) {
-      status = 'paid';
-    } else if (received > 0 && received < freight) {
-      status = 'partial';
-    }
-
-    return {
-      freight,
-      received,
-      pending,
-      status,
-    };
-  };
-
-  const payment = calculatePayment();
-
-  useEffect(() => {
-    if (paymentStatus !== 'paid' && freightAmount && amountReceived) {
-      const freight = parseFloat(freightAmount) || 0;
-      const received = parseFloat(amountReceived) || 0;
-      if (received >= freight) {
-        setPaymentStatus('paid');
-      } else if (received > 0 && received < freight) {
-        setPaymentStatus('partial');
-      }
-    }
-  }, [freightAmount, amountReceived]);
 
   return (
     <div style={s.formCard}>
       <div style={s.shimmer} />
       <h3 style={s.formTitle}>Record New Payment</h3>
 
-      <div style={s.field}>
-        <label style={s.label}>Customer</label>
-        <select
-          value={customerId}
-          onChange={(e) => {
-            setCustomerId(e.target.value);
-            setTripId('');
-          }}
-          style={s.input}
-        >
-          <option value="">Select Customer</option>
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.profiles?.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
+      {/* Trip Dropdown only */}
       <div style={s.field}>
         <label style={s.label}>Trip</label>
         <select
           value={tripId}
           onChange={(e) => setTripId(e.target.value)}
           style={s.input}
-          disabled={!customerId}
+          disabled={formLoading}
         >
           <option value="">Select Trip</option>
-          {trips
-            .filter(t => !customerId || t.customer === customerId)
-            .map((trip) => (
-              <option key={trip.id} value={trip.id}>
-                {trip.customer} - {trip.origin} to {trip.destination}
-              </option>
-            ))}
+          {trips.map((trip) => (
+            <option key={trip.id} value={trip.id}>
+              {trip.id}
+            </option>
+          ))}
         </select>
       </div>
 
       <div style={s.field}>
-        <label style={s.label}>Freight Amount</label>
-        <input
-          type="number"
-          placeholder="e.g. 5000"
-          value={freightAmount}
-          onChange={(e) => setFreightAmount(e.target.value)}
-          style={s.input}
-        />
-      </div>
-
-      <div style={s.field}>
-        <label style={s.label}>Amount Received</label>
+        <label style={s.label}>Amount</label>
         <input
           type="number"
           placeholder="e.g. 2000"
-          value={amountReceived}
-          onChange={(e) => setAmountReceived(e.target.value)}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
           style={s.input}
         />
       </div>
@@ -134,38 +63,30 @@ function PaymentFormInner({
         </select>
       </div>
 
-      {payment && (
-        <div style={s.calculationCard}>
-          <h4 style={s.calculationTitle}>Payment Summary</h4>
+      <div style={s.calculationCard}>
+        <h4 style={s.calculationTitle}>Payment Summary</h4>
+        {selectedTrip && amount && (
           <div style={s.calculationRow}>
             <span>Freight Amount:</span>
-            <span>${payment.freight.toLocaleString()}</span>
+            <span>${selectedTrip.freight_amount?.toLocaleString() || '—'}</span>
           </div>
-          <div style={s.calculationRow}>
-            <span>Amount Received:</span>
-            <span>${payment.received.toLocaleString()}</span>
-          </div>
-          <div style={s.calculationRow}>
-            <span>Pending Amount:</span>
-            <span>${payment.pending.toLocaleString()}</span>
-          </div>
-          <div style={{ ...s.calculationRow, fontWeight: 700, fontSize: 16 }}>
-            <span>Status:</span>
-            <span style={{ 
-              color: payment.status === 'paid' ? '#22C55E' : 
-                     payment.status === 'partial' ? '#FB923C' : '#6B7280'
-            }}>
-              {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-            </span>
-          </div>
+        )}
+        <div style={s.calculationRow}>
+          <span>Status:</span>
+          <span style={{ 
+            color: paymentStatus === 'paid' ? '#22C55E' : 
+                   paymentStatus === 'partial' ? '#FB923C' : '#6B7280'
+          }}>
+            {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
+          </span>
         </div>
-      )}
+      </div>
 
       <div style={s.formActions}>
-        <button 
-          onClick={() => savePayment(customerId, tripId, payment?.freight || 0, payment?.received || 0, paymentStatus)} 
-          style={s.saveBtn} 
-          disabled={formLoading || !payment}
+        <button
+          onClick={() => savePayment(tripId, parseFloat(amount), paymentStatus)}
+          style={s.saveBtn}
+          disabled={formLoading || !tripId || !amount}
         >
           {formLoading ? 'Recording...' : 'Record Payment'}
         </button>
@@ -178,7 +99,6 @@ function PaymentFormInner({
 export default function PaymentForm({
   showForm,
   setShowForm,
-  customers,
   trips,
   payments,
   formLoading,
@@ -186,16 +106,15 @@ export default function PaymentForm({
 }) {
   if (!showForm) return null;
 
- return (
-  <PaymentFormInner
-    customers={customers}
-    trips={trips}
-    payments={payments}
-    formLoading={formLoading}
-    savePayment={savePayment}
-    setShowForm={setShowForm}
-  />
-);
+  return (
+    <PaymentFormInner
+      trips={trips}
+      payments={payments}
+      formLoading={formLoading}
+      savePayment={savePayment}
+      setShowForm={setShowForm}
+    />
+  );
 }
 
 const s = {
@@ -233,6 +152,21 @@ const s = {
     boxSizing: 'border-box',
     transition: 'all 0.15s',
   },
+  calculationCard: {
+    background: 'rgba(124,99,255,0.05)',
+    border: '1px solid rgba(124,99,255,0.15)',
+    borderRadius: 12, padding: 16,
+    marginBottom: 20,
+  },
+  calculationTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 14, fontWeight: 600, margin: '0 0 12px',
+    color: '#7C63FF',
+  },
+  calculationRow: {
+    display: 'flex', justifyContent: 'space-between',
+    marginBottom: 6, fontSize: 14,
+  },
   formActions: {
     display: 'flex', gap: 10, marginTop: 6,
   },
@@ -248,22 +182,5 @@ const s = {
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
-  },
-
-  /* ── CALCULATION CARD ── */
-  calculationCard: {
-    background: 'rgba(124,99,255,0.05)',
-    border: '1px solid rgba(124,99,255,0.15)',
-    borderRadius: 12, padding: 16,
-    marginBottom: 20,
-  },
-  calculationTitle: {
-    fontFamily: "'Outfit', sans-serif",
-    fontSize: 14, fontWeight: 600, margin: '0 0 12px',
-    color: '#7C63FF',
-  },
-  calculationRow: {
-    display: 'flex', justifyContent: 'space-between',
-    marginBottom: 6, fontSize: 14,
   },
 };

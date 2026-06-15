@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 
-function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, customers, trips }) {
+function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, trips }) {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
@@ -26,8 +26,7 @@ function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, custo
       <table style={s.table}>
         <thead>
           <tr>
-            <th style={s.th}>Customer</th>
-            <th style={s.th}>Trip</th>
+            <th style={s.th}>Trip ID</th>
             <th style={s.th}>Freight Amount</th>
             <th style={s.th}>Amount Received</th>
             <th style={s.th}>Pending Amount</th>
@@ -38,19 +37,18 @@ function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, custo
         <tbody>
           {payments.map((payment) => (
             <tr key={payment.id} style={s.tr}>
-              <td style={s.td}>{customers[payment.customer_id] || 'Unknown'}</td>
-              <td style={s.td}>{trips[payment.trip_id] || 'Unknown'}</td>
-              <td style={s.td}>${(payment.freight_amount || 0).toLocaleString()}</td>
-              <td style={s.td}>${(payment.amount_received || 0).toLocaleString()}</td>
-              <td style={s.td}>${((payment.freight_amount || 0) - (payment.amount_received || 0)).toLocaleString()}</td>
+              <td style={s.td}>{payment.trip_id}</td>
+              <td style={s.td}>${(payment.amount || 0).toLocaleString()}</td>
+              <td style={s.td}>${(payment.amount || 0).toLocaleString()}</td>
+              <td style={s.td}>0</td>
               <td style={s.td}>
                 <select
                   value={payment.payment_status}
                   onChange={(e) => updatePaymentStatus(payment.id, e.target.value)}
                   style={{
-  ...s.statusSelect,
-  ...getStatusColor(payment.payment_status)
-}}
+                    ...s.statusSelect,
+                    ...getStatusColor(payment.payment_status)
+                  }}
                 >
                   <option value="pending">Pending</option>
                   <option value="partial">Partial</option>
@@ -70,50 +68,8 @@ function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, custo
   );
 }
 
-export default function PaymentTable({ payments, updatePaymentStatus, deletePayment }) {
-  const [customers, setCustomers] = useState({});
-  const [trips, setTrips] = useState({});
-
-  const fetchCustomersAndTrips = async () => {
-    const customerIds = [...new Set(payments.map(p => p.customer_id))];
-    const tripIds = [...new Set(payments.map(p => p.trip_id))];
-
-    if (customerIds.length > 0) {
-      const { data: customersData, error: customersError } = await supabase
-        .from('customers')
-        .select('id, profile_id, profiles(name)')
-        .in('id', customerIds);
-
-      if (!customersError && customersData) {
-        const customersMap = {};
-        customersData.forEach(customer => {
-          customersMap[customer.id] = customer.profiles?.name || 'Unknown';
-        });
-        setCustomers(customersMap);
-      }
-    }
-
-    if (tripIds.length > 0) {
-      const { data: tripsData, error: tripsError } = await supabase
-        .from('trips')
-        .select('id, customer')
-        .in('id', tripIds);
-
-      if (!tripsError && tripsData) {
-        const tripsMap = {};
-        tripsData.forEach(trip => {
-          tripsMap[trip.id] = trip.customer || 'Unknown';
-        });
-        setTrips(tripsMap);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomersAndTrips();
-  }, [payments]);
-
-  return <PaymentTableInner payments={payments} updatePaymentStatus={updatePaymentStatus} deletePayment={deletePayment} customers={customers} trips={trips} />;
+export default function PaymentTable({ payments, updatePaymentStatus, deletePayment, trips }) {
+  return <PaymentTableInner payments={payments} updatePaymentStatus={updatePaymentStatus} deletePayment={deletePayment} trips={trips} />;
 }
 
 const s = {

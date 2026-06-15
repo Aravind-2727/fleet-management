@@ -9,13 +9,11 @@ import PaymentTable from '@/components/payments/PaymentTable';
 
 export default function PaymentsPage({ user, onLogout }) {
   const [payments, setPayments] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
-  const [filterCustomer, setFilterCustomer] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
   const [stats, setStats] = useState({
@@ -27,7 +25,6 @@ export default function PaymentsPage({ user, onLogout }) {
 
   useEffect(() => {
     fetchPayments();
-    fetchCustomers();
     fetchTrips();
   }, []);
 
@@ -40,14 +37,10 @@ export default function PaymentsPage({ user, onLogout }) {
     }
 
     let query = supabase
-      .from('customer_payments')
+      .from('payments')
       .select('*')
       .eq('owner_id', authUser.id)
       .order('created_at', { ascending: false });
-
-    if (filterCustomer) {
-      query = query.eq('customer_id', filterCustomer);
-    }
 
     if (filterStatus) {
       query = query.eq('payment_status', filterStatus);
@@ -65,17 +58,17 @@ export default function PaymentsPage({ user, onLogout }) {
     setLoading(false);
   };
 
-  const calculateStats = (paymentsData) => {
-    const totalReceivables = paymentsData.reduce((sum, p) => sum + (p.freight_amount || 0), 0);
-    const totalReceived = paymentsData.reduce((sum, p) => sum + (p.amount_received || 0), 0);
-    const pendingAmount = paymentsData.reduce((sum, p) => sum + ((p.freight_amount || 0) - (p.amount_received || 0)), 0);
+   const calculateStats = (paymentsData) => {
+    const totalReceivables = paymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalReceived = totalReceivables;
+    const pendingAmount = 0;
 
     const overduePayments = paymentsData.filter(p => {
-      if (p.payment_status === 'paid') return false;
-      const dueDate = new Date(p.due_date || p.created_at);
-      const now = new Date();
-      return dueDate < now;
-    }).length;
+        if (p.payment_status === 'paid') return false;
+        const dueDate = new Date(p.due_date || p.created_at);
+        const now = new Date();
+        return dueDate < now;
+      }).length;
 
     setStats({
       totalReceivables,
@@ -85,18 +78,16 @@ export default function PaymentsPage({ user, onLogout }) {
     });
   };
 
-  const savePayment = async (customerId, tripId, freightAmount, amountReceived, paymentStatus) => {
-    if (!customerId || !tripId || !freightAmount) {
+  const savePayment = async (tripId, amount, paymentStatus) => {
+    if (!tripId || !amount) {
       alert('Please fill all required fields');
       setFormLoading(false);
       return;
     }
 
-    const parsedFreight = parseFloat(freightAmount);
-    const parsedReceived = parseFloat(amountReceived) || 0;
-
-    if (isNaN(parsedFreight) || parsedFreight <= 0) {
-      alert('Please enter a valid freight amount');
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid amount');
       setFormLoading(false);
       return;
     }
@@ -111,17 +102,13 @@ export default function PaymentsPage({ user, onLogout }) {
     setFormLoading(true);
 
     const { error } = await supabase
-      .from('customer_payments')
+      .from('payments')
       .insert([
         {
           owner_id: authUser.id,
-          customer_id: customerId,
           trip_id: tripId,
-          freight_amount: parsedFreight,
-          amount_received: parsedReceived,
+          amount: parsedAmount,
           payment_status: paymentStatus,
-          pending_amount: parsedFreight - parsedReceived,
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         },
       ]);
 
@@ -149,7 +136,7 @@ export default function PaymentsPage({ user, onLogout }) {
     }
 
     const { error } = await supabase
-      .from('customer_payments')
+      .from('payments')
       .update(updates)
       .eq('id', id);
 
@@ -172,9 +159,8 @@ export default function PaymentsPage({ user, onLogout }) {
       return;
     }
 
-    // Verify ownership before delete
     const { data: payment, error: fetchError } = await supabase
-      .from('customer_payments')
+      .from('payments')
       .select('owner_id')
       .eq('id', id)
       .maybeSingle();
@@ -190,7 +176,7 @@ export default function PaymentsPage({ user, onLogout }) {
     }
 
     const { error } = await supabase
-      .from('customer_payments')
+      .from('payments')
       .delete()
       .eq('id', id);
 
@@ -202,19 +188,7 @@ export default function PaymentsPage({ user, onLogout }) {
     fetchPayments();
   };
 
-  const fetchCustomers = async () => {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('id, profile_id, profiles(name)');
-
-    if (error) {
-      console.error('Error fetching customers:', error);
-    } else {
-      setCustomers(data || []);
-    }
-  };
-
-  const fetchTrips = async () => {
+   const fetchTrips = async () => {
     const { data, error } = await supabase
       .from('trips')
       .select('id, customer, driver_id, freight_amount');
@@ -226,7 +200,7 @@ export default function PaymentsPage({ user, onLogout }) {
     }
   };
 
-  if (loading) {
+   if (loading) {
     return (
       <div style={s.root}>
         <div style={s.center}>
@@ -237,13 +211,9 @@ export default function PaymentsPage({ user, onLogout }) {
     );
   }
 
-  const filteredPayments = payments.filter(p => {
-    if (filterCustomer && p.customer_id !== filterCustomer) return false;
-    if (filterStatus && p.payment_status !== filterStatus) return false;
-    return true;
-  });
+   const filteredPayments = payments;
 
-  return (
+   return (
     <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
 
@@ -261,22 +231,7 @@ export default function PaymentsPage({ user, onLogout }) {
 
         {/* ── FILTERS ── */}
         <div style={s.filters}>
-          <div style={s.filterGroup}>
-            <label style={s.filterLabel}>Customer</label>
-            <select
-              value={filterCustomer}
-              onChange={(e) => setFilterCustomer(e.target.value)}
-              style={s.filterInput}
-            >
-              <option value="">All Customers</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.profiles?.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-
+          {/* Customer filter removed */}
           <div style={s.filterGroup}>
             <label style={s.filterLabel}>Status</label>
             <select
@@ -300,7 +255,6 @@ export default function PaymentsPage({ user, onLogout }) {
           <PaymentForm
             showForm={showForm}
             setShowForm={setShowForm}
-            customers={customers}
             trips={trips}
             payments={payments}
             formLoading={formLoading}
@@ -316,7 +270,7 @@ export default function PaymentsPage({ user, onLogout }) {
         />
       </div>
     </DashboardLayout>
-  );
+   );
 }
 
 function Styles() {
@@ -415,3 +369,4 @@ const s = {
     color: '#1A1A1F',
   },
 };
+
