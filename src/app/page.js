@@ -1,70 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { supabase } from './lib/supabase';
+import { useState, useEffect } from 'react';
+import { useAuth } from './lib/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user, login: authLogin, signup: authSignup, loading: authLoading } = useAuth();
   const router = useRouter();
 
+  // Redirect logged-in users away from login page
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
   const signUp = async () => {
+    if (authLoading) return;
+    
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
+    try {
+      await authSignup(email, password);
+      alert('Signup successful!');
+    } catch (error) {
       alert(error.message);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const user = data.user;
-
-    if (user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: user.id,
-            email: user.email,
-            role: 'owner',
-            name: '',
-            phone: '',
-          },
-        ]);
-
-      if (profileError) {
-        console.error('Profile insert error:', profileError);
-        alert(profileError.message);
-        setLoading(false);
-        return;
-      }
-    }
-
-    alert('Signup successful!');
-    setLoading(false);
   };
 
   const login = async () => {
+    if (authLoading) return;
+    
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
+    try {
+      await authLogin(email, password);
+    } catch (error) {
       alert(error.message);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push('/dashboard');
-    console.log(data);
   };
 
   return (

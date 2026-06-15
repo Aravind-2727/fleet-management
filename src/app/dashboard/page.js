@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../lib/AuthContext';
 import StatsCards from '../../components/dashboard/StatsCards';
 import RecentTrips from '../../components/dashboard/RecentTrips';
 import RecentExpenses from '../../components/dashboard/RecentExpenses';
@@ -10,12 +11,13 @@ import ActiveDrivers from '../../components/dashboard/ActiveDrivers';
 import FleetStatus from '../../components/dashboard/FleetStatus';
 import RevenueExpenseChart from '../../components/dashboard/RevenueExpenseChart';
 import NotificationsPanel from '../../components/dashboard/NotificationsPanel';
+import DashboardAlertCards from '../../components/dashboard/DashboardAlertCards';
+import NotificationPanel from '../../components/dashboard/NotificationPanel';
 import WelcomePanel from '../../components/dashboard/WelcomePanel';
-import Styles from '../../components/dashboard/Styles';
+import DashboardLayout from '../../components/dashboard/layout';
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, userRole } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [expensesLoading, setExpensesLoading] = useState(true);
   const [drivers, setDrivers] = useState([]);
@@ -33,31 +35,43 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [notificationsError, setNotificationsError] = useState(null);
+  const [pendingAdvances, setPendingAdvances] = useState(0);
+  const [pendingSettlements, setPendingSettlements] = useState(0);
+  const [pendingCustomerPayments, setPendingCustomerPayments] = useState(0);
+  const [overduePayments, setOverduePayments] = useState(0);
+  const [tripsInTransit, setTripsInTransit] = useState(0);
+  const [tripsWaitingForDelivery, setTripsWaitingForDelivery] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    if (!user) return;
+
+    const fetchData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        await Promise.all([
+          fetchExpenses(),
+          fetchDrivers(),
+          fetchTrucks(),
+          fetchAnalytics(),
+          fetchNotifications(),
+          fetchAlertData(),
+        ]);
       } catch (error) {
-        console.error('Error fetching user:', error);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching dashboard data:', error);
       }
     };
 
-    fetchUser();
-  }, []);
+    fetchData();
+  }, [user]);
 
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
         const { data, error } = await supabase
          .from('trip_expenses')
-.select('*')
-.order('expense_date', { ascending: false })
-          .limit(5);
+ .select('*')
+ .order('expense_date', { ascending: false })
+           .limit(5);
         
         if (error) {
           console.error('Error fetching expenses:', error);
@@ -91,10 +105,10 @@ export default function Dashboard() {
     const fetchDrivers = async () => {
       try {
         const { data, error } = await supabase
-  .from('drivers')
-.select('*')
-.order('created_at', { ascending: false })
-          .limit(5);
+   .from('drivers')
+ .select('*')
+ .order('created_at', { ascending: false })
+           .limit(5);
         
         if (error) {
           console.error('Error fetching drivers:', error);
@@ -142,8 +156,8 @@ export default function Dashboard() {
     const fetchAnalytics = async () => {
       try {
         const [tripsResponse, expensesResponse] = await Promise.all([
-  supabase
-    .from('trips')
+   supabase
+     .from('trips')
     .select('freight_amount, created_at')
     .gte(
       'created_at',
@@ -194,8 +208,8 @@ export default function Dashboard() {
               total = data
                 .filter(item => {
                const itemDate = new Date(item.expense_date);
-                  return itemDate.getMonth() === month.getMonth() && 
-                         itemDate.getFullYear() === month.getFullYear();
+                   return itemDate.getMonth() === month.getMonth() && 
+                          itemDate.getFullYear() === month.getFullYear();
                 })
                 .reduce((sum, item) => sum + (item.amount || 0), 0);
             }
@@ -363,8 +377,56 @@ export default function Dashboard() {
     router.push(action);
   };
 
+  const fetchAlertData = async () => {
+    try {
+      const [
+        advanceRequestsResponse,
+        tripsPendingSettlementResponse,
+        customerPaymentsResponse,
+        overduePaymentsResponse,
+        tripsInTransitResponse,
+        tripsWaitingDeliveryResponse
+      ] = await Promise.all([
+        supabase
+          .from('advance_requests')
+          .select('id, amount, driver_id, status, created_at')
+          .eq('status', 'pending'),
+        supabase
+          .from('trips')
+          .select('id, truck_id, driver_id, freight_amount, status, created_at')
+          .eq('status', 'pending_settlement'),
+        supabase
+          .from('customer_payments')
+          .select('id, customer_id, amount, status, created_at')
+          .eq('status', 'pending'),
+        supabase
+          .from('customer_payments')
+          .select('id, customer_id, amount, status, created_at')
+          .eq('status', 'overdue'),
+        supabase
+          .from('trips')
+          .select('id, truck_id, driver_id, freight_amount, status, created_at')
+          .eq('status', 'in_transit'),
+        supabase
+          .from('trips')
+          .select('id, truck_id, driver_id, freight_amount, status, created_at')
+          .eq('status', 'waiting_for_delivery')
+      ]);
+
+      setPendingAdvances(advanceRequestsResponse.data?.length || 0);
+      setPendingSettlements(tripsPendingSettlementResponse.data?.length || 0);
+      setPendingCustomerPayments(customerPaymentsResponse.data?.length || 0);
+      setOverduePayments(overduePaymentsResponse.data?.length || 0);
+      setTripsInTransit(tripsInTransitResponse.data?.length || 0);
+      setTripsWaitingForDelivery(tripsWaitingDeliveryResponse.data?.length || 0);
+    } catch (error) {
+      console.error('Error fetching alert data:', error);
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
+    fetchAlertData();
   }, []);
 
   const handleLogout = async () => {
@@ -383,42 +445,55 @@ export default function Dashboard() {
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
           <p style={s.muted}>Loading...</p>
         </div>
-        <Styles />
       </div>
     );
   }
 
   return (
-    <div style={s.root}>
+    <DashboardLayout user={user} onLogout={handleLogout}>
       <div style={s.shell}>
-        <main style={s.main}>
 
-          <StatsCards />
+        <StatsCards />
 
-          <NotificationsPanel 
-            notifications={notifications}
-            notificationsLoading={notificationsLoading}
-            notificationsError={notificationsError}
-            onRefresh={fetchNotifications}
-            onAction={handleAction}
-          />
+        <NotificationsPanel 
+          notifications={notifications}
+          notificationsLoading={notificationsLoading}
+          notificationsError={notificationsError}
+          onRefresh={fetchNotifications}
+          onAction={handleAction}
+        />
 
-          <RecentTrips />
+        <DashboardAlertCards
+          pendingAdvances={pendingAdvances}
+          pendingSettlements={pendingSettlements}
+          pendingReceivables={pendingCustomerPayments}
+          activeTrips={tripsInTransit + tripsWaitingForDelivery}
+          onNavigate={(path) => router.push(path)}
+        />
 
-          <RecentExpenses expenses={expenses} expensesLoading={expensesLoading} />
+        <NotificationPanel
+          pendingAdvances={pendingAdvances}
+          pendingSettlements={pendingSettlements}
+          pendingCustomerPayments={pendingCustomerPayments}
+          overduePayments={overduePayments}
+          tripsInTransit={tripsInTransit}
+          tripsWaitingForDelivery={tripsWaitingForDelivery}
+          onNavigate={(path) => router.push(path)}
+        />
 
-          <ActiveDrivers drivers={drivers} driversLoading={driversLoading} />
+        <RecentTrips />
 
-          <FleetStatus trucks={trucks} trucksLoading={trucksLoading} />
+        <RecentExpenses expenses={expenses} expensesLoading={expensesLoading} />
 
-          <RevenueExpenseChart analytics={analytics} />
+        <ActiveDrivers drivers={drivers} driversLoading={driversLoading} />
 
-          <WelcomePanel />
-        </main>
+        <FleetStatus trucks={trucks} trucksLoading={trucksLoading} />
+
+        <RevenueExpenseChart analytics={analytics} />
+
+        <WelcomePanel />
       </div>
-
-      <Styles />
-    </div>
+    </DashboardLayout>
   );
 }
 

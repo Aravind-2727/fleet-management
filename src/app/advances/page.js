@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import Sidebar from '../../components/dashboard/Sidebar';
-import Header from '../../components/dashboard/Header';
+import DashboardLayout from '../../components/dashboard/layout';
+import AdvanceStats from '../../components/advances/AdvanceStats';
 import AdvanceForm from '../../components/advances/AdvanceForm';
 import AdvanceTable from '../../components/advances/AdvanceTable';
-import AdvanceStats from '../../components/advances/AdvanceStats';
 
 export default function AdvancesPage({ user, onLogout }) {
   const [advances, setAdvances] = useState([]);
@@ -157,7 +156,7 @@ export default function AdvancesPage({ user, onLogout }) {
   const fetchDrivers = async () => {
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, profile_id, profiles(name)');
+      .select('*');
 
     if (error) {
       console.error('Error fetching drivers:', error);
@@ -173,13 +172,12 @@ export default function AdvancesPage({ user, onLogout }) {
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
           <p style={s.muted}>Loading advances...</p>
         </div>
-        <Styles />
       </div>
     );
   }
 
   return (
-    <div style={s.root}>
+    <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
 
         {/* ── HEADER ── */}
@@ -221,9 +219,7 @@ export default function AdvancesPage({ user, onLogout }) {
           deleteAdvance={deleteAdvance}
         />
       </div>
-
-      <Styles />
-    </div>
+    </DashboardLayout>
   );
 }
 

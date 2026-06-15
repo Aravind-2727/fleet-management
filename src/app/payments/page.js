@@ -3,40 +3,42 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
-import SettlementStats from '../../components/settlements/SettlementStats';
-import SettlementTable from '@/components/settlements/SettlementTable';
-export default function SettlementsPage({ user, onLogout }) {
-  const [settlements, setSettlements] = useState([]);
-  const [drivers, setDrivers] = useState([]);
+import PaymentForm from '@/components/payments/PaymentForm';
+import PaymentStats from '@/components/payments/PaymentStats';
+import PaymentTable from '@/components/payments/PaymentTable';
+
+export default function PaymentsPage({ user, onLogout }) {
+  const [payments, setPayments] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
-  const [filterDriver, setFilterDriver] = useState('');
+  const [filterCustomer, setFilterCustomer] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
   const [stats, setStats] = useState({
-    totalPayable: 0,
-    totalPaid: 0,
-    pendingSettlements: 0,
-    thisMonth: 0
+    totalReceivables: 0,
+    totalReceived: 0,
+    pendingAmount: 0,
+    overduePayments: 0
   });
 
   useEffect(() => {
-    fetchSettlements();
-    fetchDrivers();
+    fetchPayments();
+    fetchCustomers();
     fetchTrips();
   }, []);
 
-  const fetchSettlements = async () => {
+  const fetchPayments = async () => {
     let query = supabase
-      .from('settlements')
+      .from('payments')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (filterDriver) {
-      query = query.eq('driver_id', filterDriver);
+    if (filterCustomer) {
+      query = query.eq('customer_id', filterCustomer);
     }
 
     if (filterStatus) {
@@ -45,55 +47,54 @@ export default function SettlementsPage({ user, onLogout }) {
 
     const { data, error } = await query;
 
-    console.log('Settlements data:', data);
-    console.log('Settlements error:', error);
+    console.log('Payments data:', data);
+    console.log('Payments error:', error);
 
     if (error) {
       console.error(error);
     } else {
-      setSettlements(data || []);
+      setPayments(data || []);
       calculateStats(data || []);
     }
 
     setLoading(false);
   };
 
-  const calculateStats = (settlementsData) => {
-    const totalPayable = settlementsData.reduce((sum, s) => sum + (s.net_payable || 0), 0);
-    const totalPaid = settlementsData.reduce((sum, s) => sum + (s.net_payable || 0) * (s.payment_status === 'paid' ? 1 : 0), 0);
-    const pendingSettlements = settlementsData.filter(s => s.payment_status !== 'paid').length;
+  const calculateStats = (paymentsData) => {
+    const totalReceivables = paymentsData.reduce((sum, p) => sum + (p.freight_amount || 0), 0);
+    const totalReceived = paymentsData.reduce((sum, p) => sum + (p.amount_received || 0), 0);
+    const pendingAmount = paymentsData.reduce((sum, p) => sum + ((p.freight_amount || 0) - (p.amount_received || 0)), 0);
 
-    const thisMonth = settlementsData.filter(s => {
-      const date = new Date(s.payment_date || s.created_at);
+    const overduePayments = paymentsData.filter(p => {
+      if (p.payment_status === 'paid') return false;
+      const dueDate = new Date(p.due_date || p.created_at);
       const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      return dueDate < now;
     }).length;
 
     setStats({
-      totalPayable,
-      totalPaid,
-      pendingSettlements,
-      thisMonth
+      totalReceivables,
+      totalReceived,
+      pendingAmount,
+      overduePayments
     });
   };
 
-  const saveSettlement = async (driverId, tripId, paymentMode, calculation) => {
+  const savePayment = async (customerId, tripId, freightAmount, amountReceived, paymentStatus) => {
     setFormLoading(true);
 
     const { error } = await supabase
-      .from('settlements')
+      .from('payments')
       .insert([
         {
           owner_id: '1f90a60a-bbc2-4a87-bea6-fe5a9dfc7d5d',
-          driver_id: driverId,
+          customer_id: customerId,
           trip_id: tripId,
-          earnings: calculation.earnings,
-          reimbursable_expenses: calculation.expenses,
-          advances_deducted: calculation.advances,
-          net_payable: calculation.netPayable,
-          payment_mode: paymentMode,
-          payment_status: 'pending',
-          payment_date: null,
+          freight_amount: freightAmount,
+          amount_received: amountReceived,
+          payment_status: paymentStatus,
+          pending_amount: freightAmount - amountReceived,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         },
       ]);
 
@@ -106,23 +107,22 @@ export default function SettlementsPage({ user, onLogout }) {
 
     setShowForm(false);
     setFormLoading(false);
-    fetchSettlements();
+    fetchPayments();
 
-    alert('Settlement created successfully');
+    alert('Payment recorded successfully');
   };
 
-  const updateSettlementStatus = async (id, newStatus) => {
+  const updatePaymentStatus = async (id, newStatus) => {
     const updates = {};
 
     if (newStatus === 'paid') {
       updates.payment_status = 'paid';
-      updates.payment_date = new Date().toISOString();
     } else {
       updates.payment_status = newStatus;
     }
 
     const { error } = await supabase
-      .from('settlements')
+      .from('payments')
       .update(updates)
       .eq('id', id);
 
@@ -131,12 +131,12 @@ export default function SettlementsPage({ user, onLogout }) {
       return;
     }
 
-    fetchSettlements();
+    fetchPayments();
   };
 
-  const deleteSettlement = async (id) => {
+  const deletePayment = async (id) => {
     const { error } = await supabase
-      .from('settlements')
+      .from('payments')
       .delete()
       .eq('id', id);
 
@@ -145,18 +145,18 @@ export default function SettlementsPage({ user, onLogout }) {
       return;
     }
 
-    fetchSettlements();
+    fetchPayments();
   };
 
-  const fetchDrivers = async () => {
+  const fetchCustomers = async () => {
     const { data, error } = await supabase
-      .from('drivers')
+      .from('customers')
       .select('id, profile_id, profiles(name)');
 
     if (error) {
-      console.error('Error fetching drivers:', error);
+      console.error('Error fetching customers:', error);
     } else {
-      setDrivers(data || []);
+      setCustomers(data || []);
     }
   };
 
@@ -177,15 +177,15 @@ export default function SettlementsPage({ user, onLogout }) {
       <div style={s.root}>
         <div style={s.center}>
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
-          <p style={s.muted}>Loading settlements...</p>
+          <p style={s.muted}>Loading payments...</p>
         </div>
       </div>
     );
   }
 
-  const filteredSettlements = settlements.filter(s => {
-    if (filterDriver && s.driver_id !== filterDriver) return false;
-    if (filterStatus && s.payment_status !== filterStatus) return false;
+  const filteredPayments = payments.filter(p => {
+    if (filterCustomer && p.customer_id !== filterCustomer) return false;
+    if (filterStatus && p.payment_status !== filterStatus) return false;
     return true;
   });
 
@@ -197,27 +197,27 @@ export default function SettlementsPage({ user, onLogout }) {
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
-            <h1 style={s.headerTitle}>Driver Settlements</h1>
+            <h1 style={s.headerTitle}>Customer Payments</h1>
           </div>
 
           <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Create Settlement
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Record Payment
           </button>
         </div>
 
         {/* ── FILTERS ── */}
         <div style={s.filters}>
           <div style={s.filterGroup}>
-            <label style={s.filterLabel}>Driver</label>
+            <label style={s.filterLabel}>Customer</label>
             <select
-              value={filterDriver}
-              onChange={(e) => setFilterDriver(e.target.value)}
+              value={filterCustomer}
+              onChange={(e) => setFilterCustomer(e.target.value)}
               style={s.filterInput}
             >
-              <option value="">All Drivers</option>
-                {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.profiles?.name}
+              <option value="">All Customers</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.profiles?.name}
                   </option>
                 ))}
             </select>
@@ -232,33 +232,33 @@ export default function SettlementsPage({ user, onLogout }) {
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
               <option value="paid">Paid</option>
-              <option value="processing">Processing</option>
             </select>
           </div>
         </div>
 
         {/* ── STATS CARDS ── */}
-        <SettlementStats settlements={settlements} />
+        <PaymentStats payments={payments} />
 
         {/* ── ADD FORM ── */}
         {showForm && (
-          <SettlementForm
+          <PaymentForm
             showForm={showForm}
             setShowForm={setShowForm}
-            drivers={drivers}
+            customers={customers}
             trips={trips}
-            settlements={settlements}
+            payments={payments}
             formLoading={formLoading}
-            saveSettlement={saveSettlement}
+            savePayment={savePayment}
           />
         )}
 
         {/* ── TABLE ── */}
-        <SettlementTable
-          settlements={filteredSettlements}
-          updateSettlementStatus={updateSettlementStatus}
-          deleteSettlement={deleteSettlement}
+        <PaymentTable
+          payments={filteredPayments}
+          updatePaymentStatus={updatePaymentStatus}
+          deletePayment={deletePayment}
         />
       </div>
     </DashboardLayout>

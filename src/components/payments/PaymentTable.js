@@ -3,22 +3,22 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 
-function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettlement, drivers, trips }) {
+function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, customers, trips }) {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
         return s.statusPending;
+      case 'partial':
+        return s.statusPartial;
       case 'paid':
         return s.statusPaid;
-      case 'processing':
-        return s.statusProcessing;
       default:
         return s.statusDefault;
     }
   };
 
-  if (settlements.length === 0) {
-    return <div style={s.empty}>No settlements found</div>;
+  if (payments.length === 0) {
+    return <div style={s.empty}>No payments found</div>;
   }
 
   return (
@@ -26,44 +26,36 @@ function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettl
       <table style={s.table}>
         <thead>
           <tr>
-            <th style={s.th}>Driver</th>
+            <th style={s.th}>Customer</th>
             <th style={s.th}>Trip</th>
-            <th style={s.th}>Earnings</th>
-            <th style={s.th}>Reimbursable Expenses</th>
-            <th style={s.th}>Advances Deducted</th>
-            <th style={s.th}>Net Payable</th>
-            <th style={s.th}>Payment Mode</th>
+            <th style={s.th}>Freight Amount</th>
+            <th style={s.th}>Amount Received</th>
+            <th style={s.th}>Pending Amount</th>
             <th style={s.th}>Status</th>
             <th style={s.th}>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {settlements.map((settlement) => (
-            <tr key={settlement.id} style={s.tr}>
-              <td style={s.td}>{drivers[settlement.driver_id] || 'Unknown'}</td>
-              <td style={s.td}>{trips[settlement.trip_id] || 'Unknown'}</td>
-              <td style={s.td}>${settlement.earnings.toLocaleString()}</td>
-              <td style={s.td}>${settlement.reimbursable_expenses.toLocaleString()}</td>
-              <td style={s.td}>${settlement.advances_deducted.toLocaleString()}</td>
-              <td style={s.td}>
-                <span style={{ fontWeight: 600, color: settlement.net_payable >= 0 ? '#22C55E' : '#E0524A' }}>
-                  ${Math.abs(settlement.net_payable).toLocaleString()}
-                </span>
-              </td>
-              <td style={s.td}>{settlement.payment_mode}</td>
+          {payments.map((payment) => (
+            <tr key={payment.id} style={s.tr}>
+              <td style={s.td}>{customers[payment.customer_id] || 'Unknown'}</td>
+              <td style={s.td}>{trips[payment.trip_id] || 'Unknown'}</td>
+              <td style={s.td}>${payment.freight_amount.toLocaleString()}</td>
+              <td style={s.td}>${payment.amount_received.toLocaleString()}</td>
+              <td style={s.td}>${(payment.freight_amount - payment.amount_received).toLocaleString()}</td>
               <td style={s.td}>
                 <select
-                  value={settlement.payment_status}
-                  onChange={(e) => updateSettlementStatus(settlement.id, e.target.value)}
-                  style={{ ...s.statusSelect, backgroundColor: getStatusColor(settlement.payment_status) }}
+                  value={payment.payment_status}
+                  onChange={(e) => updatePaymentStatus(payment.id, e.target.value)}
+                  style={{ ...s.statusSelect, backgroundColor: getStatusColor(payment.payment_status) }}
                 >
                   <option value="pending">Pending</option>
+                  <option value="partial">Partial</option>
                   <option value="paid">Paid</option>
-                  <option value="processing">Processing</option>
                 </select>
               </td>
               <td style={{ ...s.td, textAlign: 'right' }}>
-                <button onClick={() => deleteSettlement(settlement.id)} style={s.deleteBtn}>
+                <button onClick={() => deletePayment(payment.id)} style={s.deleteBtn}>
                   Delete
                 </button>
               </td>
@@ -75,26 +67,26 @@ function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettl
   );
 }
 
-export default function SettlementTable({ settlements, updateSettlementStatus, deleteSettlement }) {
-  const [drivers, setDrivers] = useState({});
+export default function PaymentTable({ payments, updatePaymentStatus, deletePayment }) {
+  const [customers, setCustomers] = useState({});
   const [trips, setTrips] = useState({});
 
-  const fetchDriversAndTrips = async () => {
-    const driverIds = [...new Set(settlements.map(s => s.driver_id))];
-    const tripIds = [...new Set(settlements.map(s => s.trip_id))];
+  const fetchCustomersAndTrips = async () => {
+    const customerIds = [...new Set(payments.map(p => p.customer_id))];
+    const tripIds = [...new Set(payments.map(p => p.trip_id))];
 
-    if (driverIds.length > 0) {
-      const { data: driversData, error: driversError } = await supabase
-        .from('drivers')
-        .select('id, profiles(name)')
-        .in('id', driverIds);
+    if (customerIds.length > 0) {
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
+        .select('id, profile_id, profiles(name)')
+        .in('id', customerIds);
 
-      if (!driversError && driversData) {
-        const driversMap = {};
-        driversData.forEach(driver => {
-          driversMap[driver.id] = driver.profiles?.name || 'Unknown';
+      if (!customersError && customersData) {
+        const customersMap = {};
+        customersData.forEach(customer => {
+          customersMap[customer.id] = customer.profiles?.name || 'Unknown';
         });
-        setDrivers(driversMap);
+        setCustomers(customersMap);
       }
     }
 
@@ -115,10 +107,10 @@ export default function SettlementTable({ settlements, updateSettlementStatus, d
   };
 
   useEffect(() => {
-    fetchDriversAndTrips();
-  }, [settlements]);
+    fetchCustomersAndTrips();
+  }, [payments]);
 
-  return <SettlementTableInner settlements={settlements} updateSettlementStatus={updateSettlementStatus} deleteSettlement={deleteSettlement} drivers={drivers} trips={trips} />;
+  return <PaymentTableInner payments={payments} updatePaymentStatus={updatePaymentStatus} deletePayment={deletePayment} customers={customers} trips={trips} />;
 }
 
 const s = {
@@ -174,6 +166,11 @@ const s = {
 
   /* ── STATUS COLORS ── */
   statusPending: {
+    background: 'rgba(107,114,128,0.1)',
+    border: '1px solid rgba(107,114,128,0.25)',
+    color: '#6B7280',
+  },
+  statusPartial: {
     background: 'rgba(251,146,60,0.1)',
     border: '1px solid rgba(251,146,60,0.25)',
     color: '#FB923C',
@@ -182,11 +179,6 @@ const s = {
     background: 'rgba(34,197,94,0.1)',
     border: '1px solid rgba(34,197,94,0.25)',
     color: '#22C55E',
-  },
-  statusProcessing: {
-    background: 'rgba(59,130,246,0.1)',
-    border: '1px solid rgba(59,130,246,0.25)',
-    color: '#3B82F6',
   },
   statusDefault: {
     background: 'rgba(107,114,128,0.1)',

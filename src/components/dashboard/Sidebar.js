@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../app/lib/supabase';
 
 export default function Sidebar({ user, onLogout }) {
   const router = useRouter();
@@ -22,27 +23,27 @@ export default function Sidebar({ user, onLogout }) {
       </div>
 
       <nav style={s.nav}>
-      <a href="/dashboard" style={{ ...s.navItem, ...s.navItemActive }}>
+        <a href="/dashboard" style={s.navItemActive}>
           <i className="ti ti-layout-dashboard" style={s.navIcon} />
           <span>Dashboard</span>
         </a>
-       <a href="/trips" style={s.navItem}>
-  <i className="ti ti-truck" style={s.navIcon} />
-  <span>Trucks</span>
-</a>
+        <a href="/trucks" style={s.navItem}>
+          <i className="ti ti-truck" style={s.navIcon} />
+          <span>Trucks</span>
+        </a>
         <a href="/drivers" style={s.navItem}>
           <i className="ti ti-id-badge-2" style={s.navIcon} />
           <span>Drivers</span>
         </a>
-        <a href="/trips-management" style={{ ...s.navItem, ...s.navItemActive }}>
+        <a href="/trips-management" style={s.navItem}>
           <i className="ti ti-route" style={s.navIcon} />
-          <span>Trips</span>
+          <span>Trips Management</span>
         </a>
-        <a href="/expenses" style={{ ...s.navItem, ...s.navItemActive }}>
+        <a href="/expenses" style={s.navItem}>
           <i className="ti ti-receipt" style={s.navIcon} />
           <span>Expenses</span>
         </a>
-        <a href="/advances" style={{ ...s.navItem, ...s.navItemActive }}>
+        <a href="/advances" style={s.navItem}>
           <i className="ti ti-wallet" style={s.navIcon} />
           <span>Advances</span>
         </a>
@@ -50,15 +51,15 @@ export default function Sidebar({ user, onLogout }) {
           <i className="ti ti-receipt" style={s.navIcon} />
           <span>Settlements</span>
         </a>
-        <a href="#" style={s.navItem}>
+        <a href="/payments" style={s.navItem}>
           <i className="ti ti-credit-card" style={s.navIcon} />
           <span>Payments</span>
         </a>
-        <a href="#" style={s.navItem}>
+        <a href="/reports" style={s.navItem}>
           <i className="ti ti-chart-bar" style={s.navIcon} />
           <span>Reports</span>
         </a>
-        <a href="#" style={s.navItem}>
+        <a href="/settings" style={s.navItem}>
           <i className="ti ti-settings" style={s.navIcon} />
           <span>Settings</span>
         </a>

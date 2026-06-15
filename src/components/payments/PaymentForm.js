@@ -3,97 +3,77 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 
-function SettlementFormInner({
-  drivers,
+function PaymentFormInner({
+  customers,
   trips,
-  settlements,
+  payments,
   formLoading,
-  saveSettlement,
+  savePayment,
 }) {
-  const [driverId, setDriverId] = useState('');
+  const [customerId, setCustomerId] = useState('');
   const [tripId, setTripId] = useState('');
-  const [paymentMode, setPaymentMode] = useState('Cash');
-  const [expenses, setExpenses] = useState([]);
-  const [advances, setAdvances] = useState([]);
+  const [freightAmount, setFreightAmount] = useState('');
+  const [amountReceived, setAmountReceived] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('pending');
 
   const selectedTrip = trips.find(t => t.id === tripId);
-  const selectedDriver = drivers.find(d => d.id === driverId);
+  const selectedCustomer = customers.find(c => c.id === customerId);
 
-  const fetchTripExpenses = async (tripId, driverId) => {
-    const { data, error } = await supabase
-      .from('trip_expenses')
-      .select('*')
-      .eq('trip_id', tripId)
-      .eq('driver_id', driverId)
-      .eq('status', 'paid');
+  const calculatePayment = () => {
+    if (!freightAmount) return null;
 
-    if (error) {
-      console.error('Error fetching expenses:', error);
-    } else {
-      setExpenses(data || []);
+    const freight = parseFloat(freightAmount) || 0;
+    const received = parseFloat(amountReceived) || 0;
+    const pending = freight - received;
+
+    let status = 'pending';
+    if (received >= freight) {
+      status = 'paid';
+    } else if (received > 0 && received < freight) {
+      status = 'partial';
     }
-  };
-
-  const fetchDriverAdvances = async (driverId) => {
-    const { data, error } = await supabase
-      .from('advance_requests')
-      .select('*')
-      .eq('driver_id', driverId)
-      .eq('status', 'paid');
-
-    if (error) {
-      console.error('Error fetching advances:', error);
-    } else {
-      setAdvances(data || []);
-    }
-  };
-
-  const calculateSettlement = () => {
-    if (!selectedTrip || !selectedDriver) return null;
-
-    const earnings = selectedTrip.freight_amount || 0;
-
-    const expensesTotal = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const advancesTotal = advances.reduce((sum, a) => sum + (a.amount || 0), 0);
-
-    const netPayable = earnings + expensesTotal - advancesTotal;
 
     return {
-      earnings,
-      expenses: expensesTotal,
-      advances: advancesTotal,
-      netPayable,
+      freight,
+      received,
+      pending,
+      status,
     };
   };
 
-  useEffect(() => {
-    if (selectedTrip && selectedDriver) {
-      fetchTripExpenses(selectedTrip.id, selectedDriver.id);
-      fetchDriverAdvances(selectedDriver.id);
-    }
-  }, [selectedTrip, selectedDriver]);
+  const payment = calculatePayment();
 
-  const settlement = calculateSettlement();
+  useEffect(() => {
+    if (paymentStatus !== 'paid' && freightAmount && amountReceived) {
+      const freight = parseFloat(freightAmount) || 0;
+      const received = parseFloat(amountReceived) || 0;
+      if (received >= freight) {
+        setPaymentStatus('paid');
+      } else if (received > 0 && received < freight) {
+        setPaymentStatus('partial');
+      }
+    }
+  }, [freightAmount, amountReceived]);
 
   return (
     <div style={s.formCard}>
       <div style={s.shimmer} />
-      <h3 style={s.formTitle}>Create New Settlement</h3>
+      <h3 style={s.formTitle}>Record New Payment</h3>
 
       <div style={s.field}>
-        <label style={s.label}>Driver</label>
+        <label style={s.label}>Customer</label>
         <select
-          value={driverId}
+          value={customerId}
           onChange={(e) => {
-            setDriverId(e.target.value);
+            setCustomerId(e.target.value);
             setTripId('');
           }}
           style={s.input}
         >
-          <option value="">Select Driver</option>
-          {drivers.map((driver) => (
-            <option key={driver.id} value={driver.id}>
-              {driver.profiles?.name}
+          <option value="">Select Customer</option>
+          {customers.map((customer) => (
+            <option key={customer.id} value={customer.id}>
+              {customer.profiles?.name}
             </option>
           ))}
         </select>
@@ -105,11 +85,11 @@ function SettlementFormInner({
           value={tripId}
           onChange={(e) => setTripId(e.target.value)}
           style={s.input}
-          disabled={!driverId}
+          disabled={!customerId}
         >
           <option value="">Select Trip</option>
           {trips
-            .filter(t => !driverId || t.driver_id === driverId)
+            .filter(t => !customerId || t.customer === customerId)
             .map((trip) => (
               <option key={trip.id} value={trip.id}>
                 {trip.customer} - {trip.origin} to {trip.destination}
@@ -119,46 +99,74 @@ function SettlementFormInner({
       </div>
 
       <div style={s.field}>
-        <label style={s.label}>Payment Mode</label>
+        <label style={s.label}>Freight Amount</label>
+        <input
+          type="number"
+          placeholder="e.g. 5000"
+          value={freightAmount}
+          onChange={(e) => setFreightAmount(e.target.value)}
+          style={s.input}
+        />
+      </div>
+
+      <div style={s.field}>
+        <label style={s.label}>Amount Received</label>
+        <input
+          type="number"
+          placeholder="e.g. 2000"
+          value={amountReceived}
+          onChange={(e) => setAmountReceived(e.target.value)}
+          style={s.input}
+        />
+      </div>
+
+      <div style={s.field}>
+        <label style={s.label}>Payment Status</label>
         <select
-          value={paymentMode}
-          onChange={(e) => setPaymentMode(e.target.value)}
+          value={paymentStatus}
+          onChange={(e) => setPaymentStatus(e.target.value)}
           style={s.input}
         >
-          <option value="Cash">Cash</option>
-          <option value="UPI">UPI</option>
-          <option value="Bank Transfer">Bank Transfer</option>
-          <option value="Other">Other</option>
+          <option value="pending">Pending</option>
+          <option value="partial">Partial</option>
+          <option value="paid">Paid</option>
         </select>
       </div>
 
-      {settlement && (
+      {payment && (
         <div style={s.calculationCard}>
-          <h4 style={s.calculationTitle}>Settlement Calculation</h4>
+          <h4 style={s.calculationTitle}>Payment Summary</h4>
           <div style={s.calculationRow}>
-            <span>Driver Earnings:</span>
-            <span>${settlement.earnings.toLocaleString()}</span>
+            <span>Freight Amount:</span>
+            <span>${payment.freight.toLocaleString()}</span>
           </div>
           <div style={s.calculationRow}>
-            <span>Expenses:</span>
-            <span>+$${settlement.expenses.toLocaleString()}</span>
+            <span>Amount Received:</span>
+            <span>${payment.received.toLocaleString()}</span>
           </div>
           <div style={s.calculationRow}>
-            <span>Advances Deducted:</span>
-            <span>-${settlement.advances.toLocaleString()}</span>
+            <span>Pending Amount:</span>
+            <span>${payment.pending.toLocaleString()}</span>
           </div>
           <div style={{ ...s.calculationRow, fontWeight: 700, fontSize: 16 }}>
-            <span>Net Payable:</span>
-            <span style={{ color: settlement.netPayable >= 0 ? '#22C55E' : '#E0524A' }}>
-              ${Math.abs(settlement.netPayable).toLocaleString()}
+            <span>Status:</span>
+            <span style={{ 
+              color: payment.status === 'paid' ? '#22C55E' : 
+                     payment.status === 'partial' ? '#FB923C' : '#6B7280'
+            }}>
+              {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
             </span>
           </div>
         </div>
       )}
 
       <div style={s.formActions}>
-        <button onClick={() => saveSettlement(driverId, tripId, paymentMode, settlement)} style={s.saveBtn} disabled={formLoading || !settlement}>
-          {formLoading ? 'Creating...' : 'Create Settlement'}
+        <button 
+          onClick={() => savePayment(customerId, tripId, payment?.freight || 0, payment?.received || 0, paymentStatus)} 
+          style={s.saveBtn} 
+          disabled={formLoading || !payment}
+        >
+          {formLoading ? 'Recording...' : 'Record Payment'}
         </button>
         <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
       </div>
@@ -166,18 +174,18 @@ function SettlementFormInner({
   );
 }
 
-export default function SettlementForm({
+export default function PaymentForm({
   showForm,
   setShowForm,
-  drivers,
+  customers,
   trips,
-  settlements,
+  payments,
   formLoading,
-  saveSettlement,
+  savePayment,
 }) {
   if (!showForm) return null;
 
-  return <SettlementFormInner drivers={drivers} trips={trips} settlements={settlements} formLoading={formLoading} saveSettlement={saveSettlement} />;
+  return <PaymentFormInner customers={customers} trips={trips} payments={payments} formLoading={formLoading} savePayment={savePayment} />;
 }
 
 const s = {

@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import Sidebar from '../../components/dashboard/Sidebar';
-import Header from '../../components/dashboard/Header';
-import Styles from '../../components/dashboard/Styles';
+import DashboardLayout from '../../components/dashboard/layout';
 
 export default function TripsManagementPage({ user, onLogout }) {
   const [trips, setTrips] = useState([]);
@@ -149,7 +147,6 @@ export default function TripsManagementPage({ user, onLogout }) {
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
           <p style={s.muted}>Loading trips...</p>
         </div>
-        <Styles />
       </div>
     );
   }
@@ -182,7 +179,7 @@ export default function TripsManagementPage({ user, onLogout }) {
   };
 
   return (
-    <div style={s.root}>
+    <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
 
         {/* ── HEADER ── */}
@@ -352,9 +349,22 @@ export default function TripsManagementPage({ user, onLogout }) {
           </div>
         )}
       </div>
+    </DashboardLayout>
+  );
+}
 
-      <Styles />
-    </div>
+function Styles() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+      @keyframes spin { to { transform: rotate(360deg); } }
+      input::placeholder { color: rgba(20,20,30,0.3); }
+      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
+      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+    `}</style>
   );
 }
 
