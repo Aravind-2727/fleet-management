@@ -1,5 +1,7 @@
 'use client';
 
+import { supabase } from '../../app/lib/supabase';
+
 import { useState } from 'react';
 
 export default function UserSettings() {

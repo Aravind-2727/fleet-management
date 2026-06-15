@@ -49,8 +49,7 @@ export default function Dashboard() {
   // ---- Recent expenses (owner-scoped) ----
   useEffect(() => {
     if (!user) {
-      setExpensesLoading(false);
-      return;
+       return;
     }
 
     const fetchExpenses = async () => {
