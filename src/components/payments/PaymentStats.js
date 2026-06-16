@@ -1,22 +1,19 @@
 'use client';
+import { FiDollarSign, FiCalendar, FiClipboard } from 'react-icons/fi';
 
-export default function PaymentStats({ payments }) {
-   const totalReceivables = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-   const totalReceived = totalReceivables; // use same value since amount replaces both freight and received
-   const pendingAmount = 0; // no pending column; set to 0 to avoid runtime errors
-
-   const overduePayments = payments.filter(p => {
-     if (p.payment_status === 'paid') return false;
-     const dueDate = new Date(p.payment_date || p.created_at);
-     const now = new Date();
-     return dueDate < now;
-   }).length;
+export default function PaymentStats({ stats }) {
+  const {
+  totalReceivables = 0,
+  totalReceived = 0,
+  pendingAmount = 0,
+  overduePayments = 0,
+} = stats || {};
 
   return (
     <div style={s.statsGrid}>
       <div style={s.statsCard}>
         <div style={s.statsIcon}>
-          <i className="ti ti-wallet" style={{ fontSize: 24, color: '#7C63FF' }} />
+         <FiDollarSign style={{ fontSize: 24, color: '#7C63FF' }} />
         </div>
         <div>
           <p style={s.statsLabel}>Total Receivables</p>
@@ -26,7 +23,7 @@ export default function PaymentStats({ payments }) {
 
       <div style={s.statsCard}>
         <div style={s.statsIcon}>
-          <i className="ti ti-building-bank" style={{ fontSize: 24, color: '#22C55E' }} />
+          <FiCalendar style={{ fontSize: 24, color: '#22C55E' }} />
         </div>
         <div>
           <p style={s.statsLabel}>Total Received</p>
@@ -36,7 +33,7 @@ export default function PaymentStats({ payments }) {
 
       <div style={s.statsCard}>
         <div style={s.statsIcon}>
-          <i className="ti ti-clock" style={{ fontSize: 24, color: '#FB923C' }} />
+          <FiClipboard style={{ fontSize: 24, color: '#FB923C' }} />
         </div>
         <div>
           <p style={s.statsLabel}>Pending Amount</p>
@@ -46,7 +43,7 @@ export default function PaymentStats({ payments }) {
 
       <div style={s.statsCard}>
         <div style={s.statsIcon}>
-          <i className="ti ti-calendar" style={{ fontSize: 24, color: '#EF4444' }} />
+          <FiCalendar style={{ fontSize: 24, color: '#EF4444' }} />
         </div>
         <div>
           <p style={s.statsLabel}>Overdue Payments</p>

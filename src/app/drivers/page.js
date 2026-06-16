@@ -36,9 +36,7 @@ export default function DriversPage({ user, onLogout }) {
   };
 
   const saveDriver = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
@@ -46,18 +44,22 @@ export default function DriversPage({ user, onLogout }) {
       return;
     }
 
-    const { error } = await supabase
-      .from('drivers')
-      .insert([
-        {
-          owner_id: authUser.id,
-          name: name.trim(),
-          phone: phone.trim(),
-          email: email.trim(),
-          pay_type: payType,
-          status: status,
-        },
-      ]);
+   const { error } = await supabase
+  .from('drivers')
+  .insert([{
+    owner_id: authUser.id,
+    name: name.trim(),
+    phone: phone.trim(),
+    email: email.trim(),
+    pay_type: payType,
+    status: status,
+  }]);
+
+if (error) {
+  console.error(error);
+  alert(error.message);
+  return;
+}
 
     if (error) {
       console.error(error);
@@ -73,14 +75,11 @@ export default function DriversPage({ user, onLogout }) {
     setShowForm(false);
 
     fetchDrivers();
-
     alert('Driver added successfully');
   };
 
   const deleteDriver = async (id) => {
-    if (!confirm('Are you sure you want to delete this driver?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this driver?')) return;
 
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
@@ -88,10 +87,9 @@ export default function DriversPage({ user, onLogout }) {
       return;
     }
 
-    // Verify ownership before delete
     const { data: driver, error: fetchError } = await supabase
       .from('drivers')
-      .select('owner_id')
+      .select('owner_id, profile_id')
       .eq('id', id)
       .maybeSingle();
 
@@ -115,6 +113,11 @@ export default function DriversPage({ user, onLogout }) {
       return;
     }
 
+    // Optionally delete the profile too
+    if (driver.profile_id) {
+      await supabase.from('profiles').delete().eq('id', driver.profile_id);
+    }
+
     fetchDrivers();
   };
 
@@ -128,7 +131,7 @@ export default function DriversPage({ user, onLogout }) {
 
     const { data, error } = await supabase
       .from('drivers')
-      .select('id, profile_id, status, profiles(name, phone, email)')
+      .select('id, profile_id, pay_type, status, profiles(name, phone, email)')
       .eq('owner_id', authUser.id)
       .order('created_at', { ascending: false });
 
@@ -306,15 +309,12 @@ const s = {
     fontFamily: "'Space Grotesk', sans-serif",
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
-
   shell: {
     maxWidth: 1200,
     margin: '0 auto',
     padding: 28,
     boxSizing: 'border-box',
   },
-
-  /* ── HEADER ── */
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: 24, flexWrap: 'wrap', gap: 16,
@@ -336,8 +336,6 @@ const s = {
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
   },
-
-  /* ── FORM CARD ── */
   formCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
@@ -388,8 +386,6 @@ const s = {
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
   },
-
-  /* ── TABLE ── */
   empty: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',

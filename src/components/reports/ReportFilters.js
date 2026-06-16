@@ -31,7 +31,6 @@ export default function ReportFilters({
               value={dateRange.start}
               onChange={(e) => handleDateChange('start', e.target.value)}
               style={s.dateInput}
-              placeholder="Start Date"
             />
             <span style={s.dateSeparator}>to</span>
             <input
@@ -39,7 +38,6 @@ export default function ReportFilters({
               value={dateRange.end}
               onChange={(e) => handleDateChange('end', e.target.value)}
               style={s.dateInput}
-              placeholder="End Date"
             />
           </div>
         </div>
@@ -99,6 +97,11 @@ export default function ReportFilters({
         <div style={s.filterGroup}>
           <label style={s.filterLabel}>Search</label>
           <div style={s.searchContainer}>
+            {/* Icon absolutely positioned inside input */}
+            <i
+              className="ti ti-search"
+              style={s.searchIcon}
+            />
             <input
               type="text"
               value={searchQuery}
@@ -106,7 +109,6 @@ export default function ReportFilters({
               style={s.searchInput}
               placeholder="Search..."
             />
-            <i className="ti ti-search" style={{ fontSize: 16, color: 'rgba(20,20,30,0.4)' }} />
           </div>
         </div>
       </div>
@@ -170,24 +172,37 @@ const s = {
   filtersContainer: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 16, padding: 24,
+    borderRadius: 16,
+    padding: 24,
     marginBottom: 28,
   },
+
+  // FIX 1: 5 equal columns so Search doesn't wrap to a second row
   filtersGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(5, 1fr)',
     gap: 20,
+    alignItems: 'end', // vertically align all filter groups at bottom
   },
+
   filterGroup: {
-    display: 'flex', flexDirection: 'column', gap: 8,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
   },
+
   filterLabel: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
     color: 'rgba(20,20,30,0.5)',
   },
+
+  // FIX 4: explicit height to normalize across browsers
   filterSelect: {
-    padding: '12px 14px',
+    height: 46,
+    padding: '0 14px',
     borderRadius: 12,
     border: '1px solid rgba(20,20,30,0.1)',
     background: '#F7F7FA',
@@ -196,32 +211,60 @@ const s = {
     color: '#1A1A1F',
     boxSizing: 'border-box',
     transition: 'all 0.15s',
+    cursor: 'pointer',
+    appearance: 'auto',
   },
+
   dateRangeContainer: {
-    display: 'flex', alignItems: 'center', gap: 12,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
   },
+
+  // FIX 2: flex:1 so both date inputs share space equally + fixed height
   dateInput: {
-    padding: '12px 14px',
+    flex: 1,
+    height: 46,
+    padding: '0 10px',
     borderRadius: 12,
     border: '1px solid rgba(20,20,30,0.1)',
     background: '#F7F7FA',
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "'Outfit', sans-serif",
     color: '#1A1A1F',
     boxSizing: 'border-box',
     transition: 'all 0.15s',
+    minWidth: 0, // prevent overflow
   },
+
   dateSeparator: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 14, color: 'rgba(20,20,30,0.4)',
+    fontSize: 13,
+    color: 'rgba(20,20,30,0.4)',
+    flexShrink: 0,
   },
+
+  // FIX 3: position:relative so icon can be placed inside
   searchContainer: {
     position: 'relative',
-    display: 'flex', alignItems: 'center',
+    display: 'flex',
+    alignItems: 'center',
   },
+
+  // FIX 3: icon absolutely positioned on left side
+  searchIcon: {
+    position: 'absolute',
+    left: 14,
+    fontSize: 16,
+    color: 'rgba(20,20,30,0.4)',
+    pointerEvents: 'none',
+    zIndex: 1,
+  },
+
   searchInput: {
     width: '100%',
-    padding: '12px 14px 12px 40px',
+    height: 46,
+    padding: '0 14px 0 40px', // left padding for icon
     borderRadius: 12,
     border: '1px solid rgba(20,20,30,0.1)',
     background: '#F7F7FA',
@@ -231,38 +274,59 @@ const s = {
     boxSizing: 'border-box',
     transition: 'all 0.15s',
   },
+
   activeFilters: {
-    display: 'flex', alignItems: 'center', gap: 12,
-    marginTop: 20, paddingTop: 20,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 20,
+    paddingTop: 20,
     borderTop: '1px solid rgba(20,20,30,0.07)',
     flexWrap: 'wrap',
   },
+
   activeFiltersLabel: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 13, color: 'rgba(20,20,30,0.6)',
+    fontSize: 13,
+    color: 'rgba(20,20,30,0.6)',
     whiteSpace: 'nowrap',
   },
+
   filterTag: {
-    display: 'flex', alignItems: 'center', gap: 8,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
     background: 'rgba(124,99,255,0.1)',
     border: '1px solid rgba(124,99,255,0.25)',
     color: '#7C63FF',
-    padding: '6px 12px', borderRadius: 20,
-    fontSize: 12, fontWeight: 500,
+    padding: '6px 12px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 500,
     fontFamily: "'Space Grotesk', sans-serif",
   },
+
   filterTagRemove: {
-    background: 'none', border: 'none',
-    color: '#7C63FF', cursor: 'pointer',
-    fontSize: 16, fontWeight: 600,
-    padding: 0, marginLeft: 4,
+    background: 'none',
+    border: 'none',
+    color: '#7C63FF',
+    cursor: 'pointer',
+    fontSize: 16,
+    fontWeight: 600,
+    padding: 0,
+    marginLeft: 4,
   },
+
   clearAllBtn: {
-    background: 'none', border: 'none',
-    color: '#EF4444', cursor: 'pointer',
-    fontSize: 13, fontWeight: 600,
+    background: 'none',
+    border: 'none',
+    color: '#EF4444',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 600,
     fontFamily: "'Outfit', sans-serif",
-    padding: '6px 12px', borderRadius: 8,
+    padding: '6px 12px',
+    borderRadius: 8,
     marginLeft: 'auto',
   },
 };
