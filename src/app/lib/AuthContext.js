@@ -97,7 +97,7 @@ const user = session?.user;
         throw error;
       }
       
-      router.replace('/dashboard');
+      router.push('/dashboard');
       return data;
     } catch (err) {
       setError(err.message);
@@ -120,7 +120,7 @@ const user = session?.user;
       }
       
       // Redirect to dashboard after successful signup
-      router.replace('/dashboard');
+      router.push('/dashboard');
       
       if (data.user) {
         const { error: profileError } = await supabase

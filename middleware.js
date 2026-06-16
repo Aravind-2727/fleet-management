@@ -20,7 +20,7 @@ export async function middleware(request) {
   if (error || !user) {
     // No valid session, redirect to login page
     url.pathname = '/';
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(url, { status: 302 });
   }
 
   // User is authenticated, check user role
@@ -39,7 +39,7 @@ export async function middleware(request) {
     if (userRole !== 'owner') {
       // Driver users cannot access protected routes
       url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(url, { status: 302 });
     }
   }
 
