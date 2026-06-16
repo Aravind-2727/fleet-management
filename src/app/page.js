@@ -10,7 +10,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const { user, login: authLogin, signup: authSignup, loading: authLoading } = useAuth();
   const router = useRouter();
-
+useEffect(() => {
+  if (!user) {
+    setEmail('');
+    setPassword('');
+  }
+}, [user]);
   // Redirect logged-in users away from login page
   useEffect(() => {
     if (user && !loading) {
@@ -18,20 +23,34 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  const signUp = async () => {
-    if (authLoading) return;
-    
-    setLoading(true);
-    try {
-      await authSignup(email, password);
-      alert('Signup successful!');
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const signUp = async () => {
+  console.log("PAGE EMAIL =", email);
+  console.log("PAGE PASSWORD =", password);
 
+  if (!email.trim()) {
+    alert("Email empty");
+    return;
+  }
+
+  if (!password.trim()) {
+    alert("Password empty");
+    return;
+  }
+
+  if (authLoading) return;
+
+  setLoading(true);
+
+  try {
+    await authSignup(email.trim(), password);
+    alert("Signup successful!");
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
   const login = async () => {
     if (authLoading) return;
     
@@ -63,24 +82,28 @@ export default function Home() {
 
         <div style={s.field}>
           <label style={s.label}>Email</label>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={s.input}
-          />
+        <input
+  type="email"
+  name="fleet_email"
+  autoComplete="off"
+  placeholder="you@example.com"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  style={s.input}
+/>
         </div>
 
         <div style={s.field}>
           <label style={s.label}>Password</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={s.input}
-          />
+         <input
+  type="password"
+  name="fleet_password"
+  autoComplete="new-password"
+  placeholder="••••••••"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  style={s.input}
+/>
         </div>
 
         <button onClick={login} disabled={loading} style={s.primaryBtn}>
