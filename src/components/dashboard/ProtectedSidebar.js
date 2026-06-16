@@ -6,7 +6,7 @@ import { canAccessModule } from '../../app/lib/roleGuard';
 export default function ProtectedSidebar({ user, onLogout, ...props }) {
   const { userRole, loading, logout } = useAuth();
 
-  const sidebarItems = [
+   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: 'ti ti-layout-dashboard' },
     { id: 'trips', label: 'Trips', path: '/trips', icon: 'ti ti-truck' },
     { id: 'trips-management', label: 'Trips Management', path: '/trips-management', icon: 'ti ti-route' },

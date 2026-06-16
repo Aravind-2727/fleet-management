@@ -9,7 +9,7 @@ export default function Header({ user, onLogout }) {
       </div>
       <div style={s.headerRight}>
         <span style={s.userEmail}>{user?.email}</span>
-        <button onClick={onLogout} style={s.logoutBtn}>Logout</button>
+
       </div>
     </div>
   );

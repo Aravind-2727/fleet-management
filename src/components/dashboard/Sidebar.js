@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '../../app/lib/supabase';
+import { useAuth } from '../../app/lib/AuthContext';
 
 export default function Sidebar({ user, onLogout }) {
   const router = useRouter();
-
+  const { logout } = useAuth();
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -64,15 +64,15 @@ export default function Sidebar({ user, onLogout }) {
           <i className="ti ti-settings" style={s.navIcon} />
           <span>Settings</span>
         </Link>
-      </nav>
+       </nav>
 
-      <div style={s.sidebarFooter}>
-        <button onClick={handleLogout} style={s.navItemLogout}>
-          <i className="ti ti-logout" style={s.navIcon} />
-          <span>Logout</span>
-        </button>
-      </div>
-    </aside>
+       <div style={s.sidebarFooter}>
+         <button onClick={handleLogout} style={s.navItemLogout}>
+           <i className="ti ti-logout" style={s.navIcon} />
+           <span>Logout</span>
+         </button>
+       </div>
+     </aside>
   );
 }
 

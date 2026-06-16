@@ -429,7 +429,7 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logout();
       router.push('/');
     } catch (error) {
       alert(error.message);
