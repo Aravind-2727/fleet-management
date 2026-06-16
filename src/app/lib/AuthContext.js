@@ -25,9 +25,9 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase.auth.getUser();
-        const user = data?.user;
-        
+       const { data, error } = await supabase.auth.getSession();
+const session = data?.session;
+const user = session?.user;
         if (user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
