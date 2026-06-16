@@ -1,16 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../app/lib/AuthContext';
 
-export default function Sidebar({ user, onLogout }) {
-  const router = useRouter();
+export default function Sidebar() {
   const { logout } = useAuth();
+
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      router.push('/');
+      await logout();
     } catch (error) {
       alert(error.message);
     }
