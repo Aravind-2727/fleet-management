@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext();
 
@@ -91,11 +91,13 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
       });
-      
+      console.log('DATA:', data);
+      console.log('ERROR:', error);
       if (error) {
         throw error;
       }
       
+      router.replace('/dashboard');
       return data;
     } catch (err) {
       setError(err.message);
@@ -116,6 +118,9 @@ export const AuthProvider = ({ children }) => {
       if (error) {
         throw error;
       }
+      
+      // Redirect to dashboard after successful signup
+      router.replace('/dashboard');
       
       if (data.user) {
         const { error: profileError } = await supabase
