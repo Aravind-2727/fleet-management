@@ -40,12 +40,14 @@ export default function ProtectedSidebar({ user, onLogout, ...props }) {
       <nav style={s.nav}>
         {sidebarItems.map((item) => {
           return (
-            <a
-              key={item.id}
-              href={item.path}
-              style={s.navItem}
-              className={props.currentPath === item.path ? s.navItemActive : ''}
-            >
+<a
+  key={item.id}
+  href={item.path}
+  style={{
+    ...s.navItem,
+    ...(props.currentPath === item.path ? s.navItemActive : {})
+  }}
+>
               <i className={item.icon} style={s.navIcon} />
               <span>{item.label}</span>
             </a>

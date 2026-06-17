@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../lib/AuthContext';
 
-
 import StatsCards from '../../components/dashboard/StatsCards';
 import RecentTrips from '../../components/dashboard/RecentTrips';
 import RecentExpenses from '../../components/dashboard/RecentExpenses';
@@ -17,7 +16,6 @@ import DashboardAlertCards from '../../components/dashboard/DashboardAlertCards'
 import NotificationPanel from '../../components/dashboard/NotificationPanel';
 import WelcomePanel from '../../components/dashboard/WelcomePanel';
 
-
 export default function Dashboard() {
   const { user, loading } = useAuth();
   const [expenses, setExpenses] = useState([]);
@@ -27,12 +25,8 @@ export default function Dashboard() {
   const [trucks, setTrucks] = useState([]);
   const [trucksLoading, setTrucksLoading] = useState(true);
   const [analytics, setAnalytics] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    chartData: [],
-    loading: true,
-    error: null
+    totalRevenue: 0, totalExpenses: 0, netProfit: 0,
+    chartData: [], loading: true, error: null
   });
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
@@ -43,407 +37,184 @@ export default function Dashboard() {
   const [overduePayments, setOverduePayments] = useState(0);
   const [tripsInTransit, setTripsInTransit] = useState(0);
   const [tripsWaitingForDelivery, setTripsWaitingForDelivery] = useState(0);
-  const [activeTripsCount, setActiveTripsCount] = useState(0);
   const [deliveredTripsPendingSettlement, setDeliveredTripsPendingSettlement] = useState(0);
   const [driverPayableBalance, setDriverPayableBalance] = useState(0);
   const router = useRouter();
 
-
-  // ---- Recent expenses (owner-scoped) ----
   useEffect(() => {
-    if (!user) {
-       return;
-    }
-
+    if (!user) return;
     const fetchExpenses = async () => {
       try {
         const { data, error } = await supabase
-          .from('trip_expenses')
-          .select('*')
+          .from('trip_expenses').select('*')
           .eq('owner_id', user.id)
-          .order('expense_date', { ascending: false })
-          .limit(5);
-
-        if (error) {
-          console.error('Error fetching expenses:', error);
-          alert('Failed to load expenses. Please try again later.');
-        } else {
-          setExpenses(data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching expenses:', error);
-        alert('Failed to load expenses. Please try again later.');
-      } finally {
-        setExpensesLoading(false);
-      }
+          .order('expense_date', { ascending: false }).limit(5);
+        if (!error) setExpenses(data || []);
+      } catch (e) { console.error(e); }
+      finally { setExpensesLoading(false); }
     };
-
     fetchExpenses();
   }, [user]);
 
-  // ---- Drivers (owner-scoped) ----
   useEffect(() => {
-    if (!user) {
-      setDriversLoading(false);
-      return;
-    }
-
+    if (!user) { setDriversLoading(false); return; }
     const fetchDrivers = async () => {
       try {
         const { data, error } = await supabase
-          .from('drivers')
-          .select('*')
+          .from('drivers').select('*')
           .eq('owner_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (error) {
-          console.error('Error fetching drivers:', error);
-          alert('Failed to load drivers. Please try again later.');
-        } else {
-          setDrivers(data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching drivers:', error);
-        alert('Failed to load drivers. Please try again later.');
-      } finally {
-        setDriversLoading(false);
-      }
+          .order('created_at', { ascending: false }).limit(5);
+        if (!error) setDrivers(data || []);
+      } catch (e) { console.error(e); }
+      finally { setDriversLoading(false); }
     };
-
     fetchDrivers();
   }, [user]);
 
-  // ---- Trucks (owner-scoped) ----
   useEffect(() => {
-    if (!user) {
-      setTrucksLoading(false);
-      return;
-    }
-
+    if (!user) { setTrucksLoading(false); return; }
     const fetchTrucks = async () => {
       try {
         const { data, error } = await supabase
-          .from('trucks')
-          .select('*')
+          .from('trucks').select('*')
           .eq('owner_id', user.id)
           .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching trucks:', error);
-          alert('Failed to load trucks. Please try again later.');
-        } else {
-          setTrucks(data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching trucks:', error);
-        alert('Failed to load trucks. Please try again later.');
-      } finally {
-        setTrucksLoading(false);
-      }
+        if (!error) setTrucks(data || []);
+      } catch (e) { console.error(e); }
+      finally { setTrucksLoading(false); }
     };
-
     fetchTrucks();
   }, [user]);
 
-  // ---- Revenue / expense analytics (owner-scoped) ----
   useEffect(() => {
-    if (!user) {
-      setAnalytics(prev => ({ ...prev, loading: false }));
-      return;
-    }
-
+    if (!user) { setAnalytics(prev => ({ ...prev, loading: false })); return; }
     const fetchAnalytics = async () => {
       try {
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        const sixMonthsAgoISO = sixMonthsAgo.toISOString();
+        const iso = sixMonthsAgo.toISOString();
 
-        const [tripsResponse, expensesResponse] = await Promise.all([
-          supabase
-            .from('trips')
-            .select('freight_amount, created_at')
-            .eq('owner_id', user.id)
-            .gte('created_at', sixMonthsAgoISO)
-            .order('created_at', { ascending: false }),
-
-          supabase
-            .from('trip_expenses')
-            .select('amount, expense_date')
-            .eq('owner_id', user.id)
-            .gte('expense_date', sixMonthsAgoISO)
-            .order('expense_date', { ascending: false })
+        const [tripsRes, expRes] = await Promise.all([
+          supabase.from('trips').select('freight_amount, created_at')
+            .eq('owner_id', user.id).gte('created_at', iso),
+          supabase.from('trip_expenses').select('amount, expense_date')
+            .eq('owner_id', user.id).gte('expense_date', iso)
         ]);
 
-        const tripsData = tripsResponse.data || [];
-        const originalExpensesData = expensesResponse.data || [];
+        const tripsData = tripsRes.data || [];
+        const expData = expRes.data || [];
+        const totalRevenue = tripsData.reduce((s, t) => s + (t.freight_amount || 0), 0);
+        const totalExpenses = expData.reduce((s, e) => s + (e.amount || 0), 0);
 
-        const totalRevenue = tripsData.reduce((sum, trip) => sum + (trip.freight_amount || 0), 0);
-        const totalExpenses = originalExpensesData.reduce((sum, expense) => sum + (expense.amount || 0), 0);
-        const netProfit = totalRevenue - totalExpenses;
-
-        const processMonthlyData = (data, isRevenue = false) => {
-          const monthlyData = {};
+        const processMonthly = (data, isRevenue) => {
+          const result = {};
           const now = new Date();
-
           for (let i = 5; i >= 0; i--) {
-            const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthKey = month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-            const total = data
+            const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = m.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            result[key] = data
               .filter(item => {
-                const itemDate = new Date(isRevenue ? item.created_at : item.expense_date);
-                return itemDate.getMonth() === month.getMonth() &&
-                       itemDate.getFullYear() === month.getFullYear();
+                const d = new Date(isRevenue ? item.created_at : item.expense_date);
+                return d.getMonth() === m.getMonth() && d.getFullYear() === m.getFullYear();
               })
-              .reduce((sum, item) => sum + (isRevenue ? (item.freight_amount || 0) : (item.amount || 0)), 0);
-
-            monthlyData[monthKey] = total;
+              .reduce((s, item) => s + (isRevenue ? (item.freight_amount || 0) : (item.amount || 0)), 0);
           }
-
-          return monthlyData;
+          return result;
         };
 
-        const revenueData = processMonthlyData(tripsData, true);
-        const monthlyExpensesData = processMonthlyData(originalExpensesData, false);
-
-        const chartData = Object.keys(revenueData).map(month => ({
-          month,
-          revenue: revenueData[month],
-          expenses: monthlyExpensesData[month] || 0
+        const revData = processMonthly(tripsData, true);
+        const expMonthly = processMonthly(expData, false);
+        const chartData = Object.keys(revData).map(month => ({
+          month, revenue: revData[month], expenses: expMonthly[month] || 0
         }));
 
-        if (tripsResponse.error) {
-          console.error('Error fetching trips:', tripsResponse.error);
-        }
-        if (expensesResponse.error) {
-          console.error('Error fetching expenses:', expensesResponse.error);
-        }
-
-        setAnalytics({
-          totalRevenue,
-          totalExpenses,
-          netProfit,
-          chartData,
-          loading: false,
-          error: null
-        });
-      } catch (error) {
-        console.error('Error fetching analytics:', error);
-        setAnalytics({
-          totalRevenue: 0,
-          totalExpenses: 0,
-          netProfit: 0,
-          chartData: [],
-          loading: false,
-          error: error.message
-        });
+        setAnalytics({ totalRevenue, totalExpenses, netProfit: totalRevenue - totalExpenses, chartData, loading: false, error: null });
+      } catch (e) {
+        setAnalytics({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, chartData: [], loading: false, error: e.message });
       }
     };
-
     fetchAnalytics();
   }, [user]);
 
-  // ---- Notifications (owner-scoped) ----
   const fetchNotifications = async () => {
     if (!user) return;
-
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
-      const [
-        advanceRequestsResponse,
-        tripsPendingSettlementResponse,
-        customerPaymentsResponse,
-        driversAwaitingPaymentResponse
-      ] = await Promise.all([
-        supabase
-          .from('advance_requests')
-          .select('id, amount, driver_id, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('trips')
-          .select('id, truck_id, driver_id, freight_amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'pending_settlement')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('customer_payments')
-          .select('id, customer_id, amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('drivers')
-          .select('id, profile_id, payment_status, created_at, profiles(name)')
-          .eq('owner_id', user.id)
-          .eq('payment_status', 'pending')
-          .order('created_at', { ascending: false })
+      const [advRes, tripsRes, custRes, drvRes] = await Promise.all([
+        supabase.from('advance_requests').select('id, amount, driver_id, status, created_at')
+          .eq('owner_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+        supabase.from('trips').select('id, truck_id, driver_id, freight_amount, status, created_at')
+          .eq('owner_id', user.id).eq('status', 'pending_settlement').order('created_at', { ascending: false }),
+        supabase.from('customer_payments').select('id, customer_id, amount, status, created_at')
+          .eq('owner_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+        supabase.from('drivers').select('id, profile_id, payment_status, created_at, profiles(name)')
+          .eq('owner_id', user.id).eq('payment_status', 'pending').order('created_at', { ascending: false })
       ]);
 
-      const advanceRequests = advanceRequestsResponse.data || [];
-      const tripsPendingSettlement = tripsPendingSettlementResponse.data || [];
-      const customerPayments = customerPaymentsResponse.data || [];
-      const driversAwaitingPayment = driversAwaitingPaymentResponse.data || [];
-
       const newNotifications = [];
+      const adv = advRes.data || [];
+      const trips = tripsRes.data || [];
+      const cust = custRes.data || [];
+      const drv = drvRes.data || [];
 
-      if (advanceRequests.length > 0) {
-        newNotifications.push({
-          id: 'advance-requests',
-          title: 'Pending Advance Requests',
-          description: `${advanceRequests.length} driver advance requests awaiting approval`,
-          count: advanceRequests.length,
-          priority: advanceRequests.length >= 5 ? 'high' : advanceRequests.length >= 2 ? 'medium' : 'low',
-          time: advanceRequests.length === 1 ? '1 request' : `${advanceRequests.length} requests`,
-          action: '/advance-requests',
-          actionText: 'Review'
-        });
-      }
-
-      if (tripsPendingSettlement.length > 0) {
-        newNotifications.push({
-          id: 'trips-pending-settlement',
-          title: 'Trips Pending Settlement',
-          description: `${tripsPendingSettlement.length} completed trips awaiting final settlement`,
-          count: tripsPendingSettlement.length,
-          priority: tripsPendingSettlement.length >= 3 ? 'high' : 'medium',
-          time: tripsPendingSettlement.length === 1 ? '1 trip' : `${tripsPendingSettlement.length} trips`,
-          action: '/trips',
-          actionText: 'View'
-        });
-      }
-
-      if (customerPayments.length > 0) {
-        newNotifications.push({
-          id: 'customer-payments',
-          title: 'Pending Customer Payments',
-          description: `${customerPayments.length} customer payments awaiting processing`,
-          count: customerPayments.length,
-          priority: customerPayments.length >= 3 ? 'high' : 'medium',
-          time: customerPayments.length === 1 ? '1 payment' : `${customerPayments.length} payments`,
-          action: '/payments',
-          actionText: 'Process'
-        });
-      }
-
-      if (driversAwaitingPayment.length > 0) {
-        newNotifications.push({
-          id: 'drivers-awaiting-payment',
-          title: 'Drivers Awaiting Payment',
-          description: `${driversAwaitingPayment.length} drivers with pending payouts`,
-          count: driversAwaitingPayment.length,
-          priority: driversAwaitingPayment.length >= 3 ? 'high' : 'medium',
-          time: driversAwaitingPayment.length === 1 ? '1 driver' : `${driversAwaitingPayment.length} drivers`,
-          action: '/drivers',
-          actionText: 'Pay'
-        });
-      }
+      if (adv.length > 0) newNotifications.push({
+        id: 'advance-requests', title: 'Pending Advance Requests',
+        description: `${adv.length} driver advance requests awaiting approval`,
+        count: adv.length, priority: adv.length >= 5 ? 'high' : adv.length >= 2 ? 'medium' : 'low',
+        time: `${adv.length} request${adv.length > 1 ? 's' : ''}`, action: '/advance-requests', actionText: 'Review'
+      });
+      if (trips.length > 0) newNotifications.push({
+        id: 'trips-pending-settlement', title: 'Trips Pending Settlement',
+        description: `${trips.length} completed trips awaiting final settlement`,
+        count: trips.length, priority: trips.length >= 3 ? 'high' : 'medium',
+        time: `${trips.length} trip${trips.length > 1 ? 's' : ''}`, action: '/trips', actionText: 'View'
+      });
+      if (cust.length > 0) newNotifications.push({
+        id: 'customer-payments', title: 'Pending Customer Payments',
+        description: `${cust.length} customer payments awaiting processing`,
+        count: cust.length, priority: cust.length >= 3 ? 'high' : 'medium',
+        time: `${cust.length} payment${cust.length > 1 ? 's' : ''}`, action: '/payments', actionText: 'Process'
+      });
+      if (drv.length > 0) newNotifications.push({
+        id: 'drivers-awaiting-payment', title: 'Drivers Awaiting Payment',
+        description: `${drv.length} drivers with pending payouts`,
+        count: drv.length, priority: drv.length >= 3 ? 'high' : 'medium',
+        time: `${drv.length} driver${drv.length > 1 ? 's' : ''}`, action: '/drivers', actionText: 'Pay'
+      });
 
       setNotifications(newNotifications);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      setNotificationsError(error.message);
+    } catch (e) {
+      setNotificationsError(e.message);
     } finally {
       setNotificationsLoading(false);
     }
   };
 
-  const getPriorityColor = (priority, opacity = 1) => {
-    switch (priority) {
-      case 'high':
-        return `rgba(239,68,68,${opacity})`;
-      case 'medium':
-        return `rgba(251,146,60,${opacity})`;
-      case 'low':
-        return `rgba(34,197,94,${opacity})`;
-      default:
-        return `rgba(107,114,128,${opacity})`;
-    }
-  };
-
-  const handleAction = (action) => {
-    router.push(action);
-  };
-
-  // ---- Alert counts (owner-scoped) ----
   const fetchAlertData = async () => {
     if (!user) return;
-
     try {
-      const [
-        advanceRequestsResponse,
-        tripsPendingSettlementResponse,
-        customerPaymentsResponse,
-        overduePaymentsResponse,
-        tripsInTransitResponse,
-        tripsWaitingDeliveryResponse,
-        activeTripsResponse,
-        deliveredTripsResponse,
-        driverPayableResponse
-      ] = await Promise.all([
-        supabase
-          .from('advance_requests')
-          .select('id, amount, driver_id, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'pending'),
-        supabase
-          .from('trips')
-          .select('id, truck_id, driver_id, freight_amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'pending_settlement'),
-        supabase
-          .from('customer_payments')
-          .select('id, customer_id, amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'pending'),
-        supabase
-          .from('customer_payments')
-          .select('id, customer_id, amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'overdue'),
-        supabase
-          .from('trips')
-          .select('id, truck_id, driver_id, freight_amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'in_transit'),
-        supabase
-          .from('trips')
-          .select('id, truck_id, driver_id, freight_amount, status, created_at')
-          .eq('owner_id', user.id)
-          .eq('status', 'waiting_for_delivery'),
-        supabase
-          .from('trips')
-          .select('id')
-          .eq('owner_id', user.id)
-          .in('status', ['assigned', 'loading', 'in_transit', 'unloading']),
-        supabase
-          .from('trips')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('status', 'delivered')
-          .eq('close_status', true),
-        supabase
-          .from('settlements')
-          .select('net_payable')
-          .eq('owner_id', user.id)
-          .eq('payment_status', 'pending')
+      const [advRes, settlRes, custRes, overdueRes, transitRes, waitRes, activeRes, delivRes, payableRes] = await Promise.all([
+        supabase.from('advance_requests').select('id').eq('owner_id', user.id).eq('status', 'pending'),
+        supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'pending_settlement'),
+        supabase.from('customer_payments').select('id').eq('owner_id', user.id).eq('status', 'pending'),
+        supabase.from('customer_payments').select('id').eq('owner_id', user.id).eq('status', 'overdue'),
+        supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'in_transit'),
+        supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'waiting_for_delivery'),
+        supabase.from('trips').select('id').eq('owner_id', user.id).in('status', ['assigned', 'loading', 'in_transit', 'unloading']),
+        supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'delivered').eq('close_status', true),
+        supabase.from('settlements').select('net_payable').eq('owner_id', user.id).eq('payment_status', 'pending')
       ]);
 
-      setPendingAdvances(advanceRequestsResponse.data?.length || 0);
-      setPendingSettlements(tripsPendingSettlementResponse.data?.length || 0);
-      setPendingCustomerPayments(customerPaymentsResponse.data?.length || 0);
-      setOverduePayments(overduePaymentsResponse.data?.length || 0);
-      setTripsInTransit(tripsInTransitResponse.data?.length || 0);
-      setTripsWaitingForDelivery(tripsWaitingDeliveryResponse.data?.length || 0);
-      setActiveTripsCount(activeTripsResponse.data?.length || 0);
-      setDeliveredTripsPendingSettlement(deliveredTripsResponse.data?.length || 0);
-      setDriverPayableBalance(driverPayableResponse.data?.reduce((sum, item) => sum + (item.net_payable || 0), 0) || 0);
-    } catch (error) {
-      console.error('Error fetching alert data:', error);
-    }
+      setPendingAdvances(advRes.data?.length || 0);
+      setPendingSettlements(settlRes.data?.length || 0);
+      setPendingCustomerPayments(custRes.data?.length || 0);
+      setOverduePayments(overdueRes.data?.length || 0);
+      setTripsInTransit(transitRes.data?.length || 0);
+      setTripsWaitingForDelivery(waitRes.data?.length || 0);
+      setDeliveredTripsPendingSettlement(delivRes.data?.length || 0);
+      setDriverPayableBalance(payableRes.data?.reduce((s, i) => s + (i.net_payable || 0), 0) || 0);
+    } catch (e) { console.error(e); }
   };
 
   useEffect(() => {
@@ -452,22 +223,11 @@ export default function Dashboard() {
     fetchAlertData();
   }, [user]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/');
-    } catch (error) {
-      alert(error.message);
-    }
-  };
-
   if (loading) {
     return (
-      <div style={s.root}>
-        <div style={s.center}>
-          <div style={s.spinnerRing}><div style={s.spinner} /></div>
-          <p style={s.muted}>Loading...</p>
-        </div>
+      <div style={s.center}>
+        <div style={s.spinnerRing}><div style={s.spinner} /></div>
+        <p style={s.muted}>Loading...</p>
       </div>
     );
   }
@@ -481,7 +241,7 @@ export default function Dashboard() {
         notificationsLoading={notificationsLoading}
         notificationsError={notificationsError}
         onRefresh={fetchNotifications}
-        onAction={handleAction}
+        onAction={(path) => router.push(path)}
       />
 
       <DashboardAlertCards
@@ -505,27 +265,16 @@ export default function Dashboard() {
       />
 
       <RecentTrips />
-
       <RecentExpenses expenses={expenses} expensesLoading={expensesLoading} />
-
       <ActiveDrivers drivers={drivers} driversLoading={driversLoading} />
-
       <FleetStatus trucks={trucks} trucksLoading={trucksLoading} />
-
       <RevenueExpenseChart analytics={analytics} />
-
       <WelcomePanel />
     </div>
   );
 }
 
 const s = {
-  root: {
-    fontFamily: "'Outfit', sans-serif",
-    background: '#F7F7FA',
-    minHeight: '100vh',
-    color: '#1A1A1F',
-  },
   center: {
     display: 'flex', flexDirection: 'column',
     alignItems: 'center', justifyContent: 'center',
@@ -546,10 +295,11 @@ const s = {
     fontFamily: "'Space Grotesk', sans-serif",
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
-
   shell: {
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '100vh',
+    gap: 24,
+    paddingBottom: 40,
+    width: '100%',
   },
 };

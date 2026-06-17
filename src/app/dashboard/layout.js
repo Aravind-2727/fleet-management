@@ -3,10 +3,10 @@
 import ProtectedSidebar from '../../components/dashboard/ProtectedSidebar';
 import Header from '../../components/dashboard/Header';
 import { useAuth } from '../../app/lib/AuthContext';
-
+import { usePathname } from 'next/navigation';
 export default function DashboardLayout({ children }) {
   const { user, loading } = useAuth();
-
+const pathname = usePathname();
   if (loading) {
     return (
       <div style={s.loadingContainer}>
@@ -16,21 +16,17 @@ export default function DashboardLayout({ children }) {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div style={s.root}>
       <div style={s.shell}>
-        <ProtectedSidebar user={user} currentPath="/dashboard" />
-
+       <ProtectedSidebar user={user} currentPath={pathname} />
         <main style={s.main}>
           <Header user={user} />
           {children}
         </main>
       </div>
-
       <Styles />
     </div>
   );
@@ -39,7 +35,6 @@ export default function DashboardLayout({ children }) {
 function Styles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
       @keyframes spin { to { transform: rotate(360deg); } }
       ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
@@ -61,9 +56,10 @@ const s = {
   },
   main: {
     flex: 1,
+    minWidth: 0,
     padding: 28,
     boxSizing: 'border-box',
-    maxWidth: 1440,
+    overflowX: 'hidden',
   },
   loadingContainer: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

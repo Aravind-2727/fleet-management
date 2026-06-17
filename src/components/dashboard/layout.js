@@ -1,14 +1,18 @@
 'use client';
-
-import Sidebar from './Sidebar';
+import ProtectedSidebar from './ProtectedSidebar';
 import Header from './Header';
-
+import { usePathname } from 'next/navigation';
 export default function DashboardLayout({ children, user, onLogout }) {
+  const pathname = usePathname();
   return (
     <div style={s.root}>
       <div style={s.shell}>
-        <Sidebar user={user} onLogout={onLogout} />
-
+    
+<ProtectedSidebar
+  user={user}
+  onLogout={onLogout}
+  currentPath={pathname}
+/>
         <main style={s.main}>
           <Header user={user} onLogout={onLogout} />
           {children}
