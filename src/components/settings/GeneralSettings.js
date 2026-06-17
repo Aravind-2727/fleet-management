@@ -8,7 +8,7 @@ export default function GeneralSettings() {
     timeFormat: '12h',
     timezone: 'America/New_York',
     language: 'en',
-    currency: 'USD',
+      currency: 'INR',
     theme: 'light',
     compactView: false,
     emailNotifications: true,
@@ -20,7 +20,6 @@ export default function GeneralSettings() {
   };
 
   const currencies = [
-    { code: 'USD', symbol: '$', name: 'US Dollar' },
     { code: 'EUR', symbol: '€', name: 'Euro' },
     { code: 'GBP', symbol: '£', name: 'British Pound' },
     { code: 'INR', symbol: '₹', name: 'Indian Rupee' },

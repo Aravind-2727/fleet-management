@@ -1,5 +1,6 @@
 'use client';
 import { FiDollarSign, FiCalendar, FiClipboard } from 'react-icons/fi';
+import { formatCurrency } from '../../app/lib/currency';
 
 export default function PaymentStats({ stats }) {
   const {
@@ -17,7 +18,7 @@ export default function PaymentStats({ stats }) {
         </div>
         <div>
           <p style={s.statsLabel}>Total Receivables</p>
-          <h3 style={s.statsValue}>${totalReceivables.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(totalReceivables)}</h3>
         </div>
       </div>
 
@@ -27,7 +28,7 @@ export default function PaymentStats({ stats }) {
         </div>
         <div>
           <p style={s.statsLabel}>Total Received</p>
-          <h3 style={s.statsValue}>${totalReceived.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(totalReceived)}</h3>
         </div>
       </div>
 
@@ -37,7 +38,7 @@ export default function PaymentStats({ stats }) {
         </div>
         <div>
           <p style={s.statsLabel}>Pending Amount</p>
-          <h3 style={s.statsValue}>${pendingAmount.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(pendingAmount)}</h3>
         </div>
       </div>
 

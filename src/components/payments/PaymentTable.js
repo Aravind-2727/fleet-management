@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
+import { formatCurrency } from '../../app/lib/currency';
 
 function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, trips }) {
   const getStatusColor = (status) => {
@@ -38,8 +39,8 @@ function PaymentTableInner({ payments, updatePaymentStatus, deletePayment, trips
           {payments.map((payment) => (
             <tr key={payment.id} style={s.tr}>
               <td style={s.td}>{payment.trip_id}</td>
-              <td style={s.td}>${(payment.amount || 0).toLocaleString()}</td>
-              <td style={s.td}>${(payment.amount || 0).toLocaleString()}</td>
+              <td style={s.td}>{formatCurrency(payment.amount || 0)}</td>
+              <td style={s.td}>{formatCurrency(payment.amount || 0)}</td>
               <td style={s.td}>0</td>
               <td style={s.td}>
                 <select

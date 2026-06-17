@@ -29,7 +29,7 @@ export default function RecentTrips() {
               <td style={s.tableCell}>
                 <span style={s.badgeAssigned}>Assigned</span>
               </td>
-              <td style={s.tableCell}>$12,500</td>
+              <td style={s.tableCell}>{formatCurrency(12500)}</td>
             </tr>
             <tr>
               <td style={s.tableCell}>#TRIP-002</td>
@@ -43,7 +43,7 @@ export default function RecentTrips() {
               <td style={s.tableCell}>
                 <span style={s.badgeInTransit}>In Transit</span>
               </td>
-              <td style={s.tableCell}>$18,750</td>
+              <td style={s.tableCell}>{formatCurrency(18750)}</td>
             </tr>
             <tr>
               <td style={s.tableCell}>#TRIP-003</td>
@@ -57,7 +57,7 @@ export default function RecentTrips() {
               <td style={s.tableCell}>
                 <span style={s.badgeDelivered}>Delivered</span>
               </td>
-              <td style={s.tableCell}>$9,200</td>
+              <td style={s.tableCell}>{formatCurrency(9200)}</td>
             </tr>
             <tr>
               <td style={s.tableCell}>#TRIP-004</td>
@@ -71,7 +71,7 @@ export default function RecentTrips() {
               <td style={s.tableCell}>
                 <span style={s.badgeAssigned}>Assigned</span>
               </td>
-              <td style={s.tableCell}>$15,300</td>
+              <td style={s.tableCell}>{formatCurrency(15300)}</td>
             </tr>
             <tr>
               <td style={s.tableCell}>#TRIP-005</td>
@@ -85,7 +85,7 @@ export default function RecentTrips() {
               <td style={s.tableCell}>
                 <span style={s.badgeInTransit}>In Transit</span>
               </td>
-              <td style={s.tableCell}>$11,800</td>
+              <td style={s.tableCell}>{formatCurrency(11800)}</td>
             </tr>
           </tbody>
         </table>

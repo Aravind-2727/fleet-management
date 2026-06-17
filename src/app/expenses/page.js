@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/currency';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function ExpensesPage({ user, onLogout }) {
@@ -305,7 +306,7 @@ export default function ExpensesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Total Expenses</p>
-              <h3 style={s.summaryValue}>${summary.total.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>{formatCurrency(summary.total)}</h3>
             </div>
           </div>
 
@@ -315,7 +316,7 @@ export default function ExpensesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Driver Paid</p>
-              <h3 style={s.summaryValue}>${summary.driverPaid.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>{formatCurrency(summary.driverPaid)}</h3>
             </div>
           </div>
 
@@ -325,7 +326,7 @@ export default function ExpensesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Company Paid</p>
-              <h3 style={s.summaryValue}>${summary.companyPaid.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>{formatCurrency(summary.companyPaid)}</h3>
             </div>
           </div>
 
@@ -335,7 +336,7 @@ export default function ExpensesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Pending</p>
-              <h3 style={s.summaryValue}>${summary.pending.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>{formatCurrency(summary.pending)}</h3>
             </div>
           </div>
         </div>
@@ -396,7 +397,7 @@ export default function ExpensesPage({ user, onLogout }) {
               </div>
 
               <div style={s.formField}>
-                <label style={s.label}>Amount ($)</label>
+                <label style={s.label}>Amount (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 150"
@@ -461,7 +462,7 @@ export default function ExpensesPage({ user, onLogout }) {
                     <td style={s.td}>{getTripCustomer(expense.trip_id)}</td>
                     <td style={s.td}>{getDriverName(expense.driver_id)}</td>
                     <td style={s.td}>{expense.category}</td>
-                    <td style={s.td}>${(expense.amount || 0).toLocaleString()}</td>
+                    <td style={s.td}>{formatCurrency(expense.amount || 0)}</td>
                     <td style={s.td}>
                       <span style={{ ...s.paidByBadge, backgroundColor: expense.paid_by === 'driver_paid' ? '#22C55E15' : '#3B82F615', color: expense.paid_by === 'driver_paid' ? '#16A34A' : '#2563EB' }}>
                         {expense.paid_by === 'driver_paid' ? 'Driver' : 'Company'}

@@ -1,5 +1,7 @@
 'use client';
 
+import { formatCurrency } from '../../app/lib/currency';
+
 export default function SettlementStats({ settlements }) {
   const totalPayable = settlements.reduce((sum, s) => sum + (s.net_payable || 0), 0);
   const totalPaid = settlements.reduce((sum, s) => sum + (s.net_payable || 0) * (s.payment_status === 'paid' ? 1 : 0), 0);
@@ -18,7 +20,7 @@ export default function SettlementStats({ settlements }) {
         </div>
         <div>
           <p style={s.statsLabel}>Total Payable</p>
-          <h3 style={s.statsValue}>${totalPayable.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(totalPayable)}</h3>
         </div>
       </div>
 
@@ -28,7 +30,7 @@ export default function SettlementStats({ settlements }) {
         </div>
         <div>
           <p style={s.statsLabel}>Total Paid</p>
-          <h3 style={s.statsValue}>${totalPaid.toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(totalPaid)}</h3>
         </div>
       </div>
 

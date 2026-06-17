@@ -134,7 +134,9 @@ export default function ReportsPage({ user, onLogout }) {
               </div>
               <div style={s.reportContent}>
                 <h3 style={s.reportTitle}>{report.title}</h3>
-                <div style={s.reportValue}>${report.total.toLocaleString()}</div>
+                <div style={s.reportValue}>
+  ₹{report.total.toLocaleString('en-IN')}
+</div>
                 <div style={s.reportCount}>{report.count} items</div>
               </div>
             </div>
@@ -151,7 +153,7 @@ export default function ReportsPage({ user, onLogout }) {
                 <h3 style={s.financialTitle}>Total Revenue</h3>
               </div>
               <div style={s.financialValue}>
-                ${reports.find(r => r.title === 'Trip Summary')?.total?.toLocaleString() || 0}
+                ₹{(reports.find(r => r.title === 'Trip Summary')?.total || 0).toLocaleString('en-IN')}
               </div>
             </div>
 
@@ -161,7 +163,7 @@ export default function ReportsPage({ user, onLogout }) {
                 <h3 style={s.financialTitle}>Total Expenses</h3>
               </div>
               <div style={s.financialValue}>
-                ${reports.find(r => r.title === 'Total Expenses')?.total?.toLocaleString() || 0}
+                ₹{(reports.find(r => r.title === 'Total Expenses')?.total || 0).toLocaleString('en-IN')}
               </div>
             </div>
 
@@ -171,7 +173,10 @@ export default function ReportsPage({ user, onLogout }) {
                 <h3 style={s.financialTitle}>Net Profit</h3>
               </div>
               <div style={s.financialValue}>
-                ${(reports.find(r => r.title === 'Trip Summary')?.total || 0 - reports.find(r => r.title === 'Total Expenses')?.total || 0).toLocaleString()}
+                ₹{(
+  (reports.find(r => r.title === 'Trip Summary')?.total || 0) -
+  (reports.find(r => r.title === 'Total Expenses')?.total || 0)
+).toLocaleString('en-IN')}
               </div>
             </div>
           </div>

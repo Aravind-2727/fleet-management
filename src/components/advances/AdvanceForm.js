@@ -37,7 +37,7 @@ export default function AdvanceForm({
       </div>
 
       <div style={s.field}>
-        <label style={s.label}>Amount ($)</label>
+        <label style={s.label}>Amount (₹)</label>
         <input
           type="number"
           placeholder="e.g. 500"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { formatCurrency } from '../../lib/currency';
 import { useAuth } from '../../lib/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -199,7 +200,7 @@ export default function DriverHome() {
           <div style={s.cardContent}>
             {pendingAdvance ? (
               <div>
-                <p style={s.cardText}><strong>Amount:</strong> ${pendingAdvance.amount.toLocaleString()}</p>
+                <p style={s.cardText}><strong>Amount:</strong> {formatCurrency(pendingAdvance.amount)}</p>
                 <p style={s.cardText}><strong>Reason:</strong> {pendingAdvance.reason}</p>
                 <p style={s.cardText}><strong>Requested:</strong> {new Date(pendingAdvance.created_at).toLocaleDateString()}</p>
                 <div style={{ marginTop: 16 }}>
@@ -223,26 +224,26 @@ export default function DriverHome() {
             <h3 style={s.cardTitle}>Recent Expenses</h3>
           </div>
           <div style={s.cardContent}>
-            {recentExpenses.length > 0 ? (
-              <ul style={s.expenseList}>
-                {recentExpenses.map(expense => (
-                  <li key={expense.id} style={s.expenseItem}>
-                    <div>
-                      <span style={s.expenseCategory}>{expense.category}</span>
-                      <span style={s.expenseAmount}>${expense.amount.toLocaleString()}</span>
-                    </div>
-                    <div style={s.expenseMeta}>
-                      <span style={{ ...s.paidByBadge, backgroundColor: `${getExpenseColor(expense.paid_by)}15`, color: getExpenseColor(expense.paid_by) }}>
-                        {expense.paid_by === 'driver_paid' ? 'Driver Paid' : 'Company Paid'}
-                      </span>
-                      <span style={s.expenseDate}>{new Date(expense.expense_date).toLocaleDateString()}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p style={s.emptyText}>No recent expenses</p>
-            )}
+                {recentExpenses.length > 0 ? (
+                  <ul style={s.expenseList}>
+                    {recentExpenses.map(expense => (
+                      <li key={expense.id} style={s.expenseItem}>
+                        <div>
+                          <span style={s.expenseCategory}>{expense.category}</span>
+                          <span style={s.expenseAmount}>{formatCurrency(expense.amount)}</span>
+                        </div>
+                        <div style={s.expenseMeta}>
+                          <span style={{ ...s.paidByBadge, backgroundColor: `${getExpenseColor(expense.paid_by)}15`, color: getExpenseColor(expense.paid_by) }}>
+                            {expense.paid_by === 'driver_paid' ? 'Driver Paid' : 'Company Paid'}
+                          </span>
+                          <span style={s.expenseDate}>{new Date(expense.expense_date).toLocaleDateString()}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={s.emptyText}>No recent expenses</p>
+                )}
           </div>
         </div>
 
@@ -257,7 +258,7 @@ export default function DriverHome() {
           <div style={s.cardContent}>
             {currentPayableEstimate !== null ? (
               <div>
-                <div style={s.payableAmount}>${currentPayableEstimate.toLocaleString()}</div>
+                <div style={s.payableAmount}>{formatCurrency(currentPayableEstimate)}</div>
                 <p style={s.cardText}>Amount pending for payment</p>
                 <div style={{ marginTop: 16 }}>
                   <span style={{ ...s.statusBadge, backgroundColor: '#8B5CF615', color: '#8B5CF6' }}>

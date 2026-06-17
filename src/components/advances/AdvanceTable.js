@@ -1,5 +1,7 @@
 'use client';
 
+import { formatCurrency } from '../../app/lib/currency';
+
 export default function AdvanceTable({ advances, updateAdvanceStatus, deleteAdvance }) {
   if (advances.length === 0) {
     return <div style={s.empty}>No advance requests found</div>;
@@ -37,7 +39,7 @@ export default function AdvanceTable({ advances, updateAdvanceStatus, deleteAdva
           {advances.map((advance) => (
             <tr key={advance.id} style={s.tr}>
               <td style={s.td}>{advance.driver_name || 'Unknown'}</td>
-              <td style={s.td}>${(advance.amount || 0).toLocaleString()}</td>
+              <td style={s.td}>{formatCurrency(advance.amount || 0)}</td>
               <td style={s.td}>{advance.reason}</td>
               <td style={s.td}>
                 <select

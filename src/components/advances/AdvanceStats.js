@@ -1,5 +1,7 @@
 'use client';
 
+import { formatCurrency } from '../../app/lib/currency';
+
 export default function AdvanceStats({ summary }) {
   return (
     <div style={s.statsGrid}>
@@ -19,7 +21,7 @@ export default function AdvanceStats({ summary }) {
         </div>
         <div>
           <p style={s.statsLabel}>Approved Amount</p>
-          <h3 style={s.statsValue}>${(summary?.approvedAmount ?? 0).toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(summary?.approvedAmount ?? 0)}</h3>
         </div>
       </div>
 
@@ -29,7 +31,7 @@ export default function AdvanceStats({ summary }) {
         </div>
         <div>
           <p style={s.statsLabel}>Paid Amount</p>
-          <h3 style={s.statsValue}>${(summary?.paidAmount ?? 0).toLocaleString()}</h3>
+          <h3 style={s.statsValue}>{formatCurrency(summary?.paidAmount ?? 0)}</h3>
         </div>
       </div>
 

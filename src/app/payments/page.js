@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/currency';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function PaymentsPage({ user, onLogout }) {
@@ -214,15 +215,15 @@ export default function PaymentsPage({ user, onLogout }) {
 
         {/* Summary Cards */}
         <div style={s.summaryGrid}>
-          <div style={s.summaryCard}>
-            <div style={s.summaryIcon}>
-              <i className="ti ti-wallet" style={{ fontSize: 24, color: '#22C55E' }} />
+            <div style={s.summaryCard}>
+              <div style={s.summaryIcon}>
+                <i className="ti ti-wallet" style={{ fontSize: 24, color: '#22C55E' }} />
+              </div>
+              <div>
+                <p style={s.summaryLabel}>Total Driver Payments</p>
+                <h3 style={s.summaryValue}>{formatCurrency(summary.totalDriverPayments)}</h3>
+              </div>
             </div>
-            <div>
-              <p style={s.summaryLabel}>Total Driver Payments</p>
-              <h3 style={s.summaryValue}>${summary.totalDriverPayments.toLocaleString()}</h3>
-            </div>
-          </div>
 
           <div style={s.summaryCard}>
             <div style={s.summaryIcon}>
@@ -230,7 +231,7 @@ export default function PaymentsPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Total Customer Receipts</p>
-              <h3 style={s.summaryValue}>${summary.totalCustomerReceipts.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>{formatCurrency(summary.totalCustomerReceipts)}</h3>
             </div>
           </div>
 
@@ -240,7 +241,7 @@ export default function PaymentsPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Total Payments</p>
-              <h3 style={s.summaryValue}>${summary.totalPayments.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>{formatCurrency(summary.totalPayments)}</h3>
             </div>
           </div>
         </div>
@@ -267,7 +268,7 @@ export default function PaymentsPage({ user, onLogout }) {
               </div>
 
               <div style={s.formField}>
-                <label style={s.label}>Amount ($)</label>
+                <label style={s.label}>Amount (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 1000"
@@ -348,7 +349,7 @@ export default function PaymentsPage({ user, onLogout }) {
                     <td style={s.td}>
                       {payment.driver_id ? getDriverName(payment.driver_id) : getTripInfo(payment.trip_id)}
                     </td>
-                    <td style={s.td}>${(payment.amount || 0).toLocaleString()}</td>
+                    <td style={s.td}>{formatCurrency(payment.amount || 0)}</td>
                     <td style={s.td}>
                       <span style={{ ...s.badge, backgroundColor: getModeBadge(payment.mode).bg, color: getModeBadge(payment.mode).color }}>
                         {getModeBadge(payment.mode).text}

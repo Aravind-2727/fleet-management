@@ -1,5 +1,7 @@
 'use client';
 
+import { formatCurrency } from '../../app/lib/currency';
+
 export default function DashboardAlertCards({
   pendingAdvances,
   pendingSettlements,
@@ -36,7 +38,7 @@ export default function DashboardAlertCards({
     },
     {
       title: 'Driver Payable Balance',
-      count: `$${driverPayableBalance.toLocaleString()}`,
+      count: formatCurrency(driverPayableBalance),
       priority: driverPayableBalance > 0 ? 'medium' : 'low',
       color: driverPayableBalance > 0 ? '#3B82F6' : '#22C55E',
       link: '/drivers',

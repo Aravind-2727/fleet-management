@@ -26,7 +26,12 @@ export default function AdvancesPage({ user, onLogout }) {
     fetchAdvances();
     fetchDrivers();
   }, []);
-
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
   const fetchAdvances = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -252,7 +257,7 @@ export default function AdvancesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Total Pending</p>
-              <h3 style={s.summaryValue}>${summary.totalPending.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>₹{summary.totalPending.toLocaleString('en-IN')}</h3>
             </div>
           </div>
 
@@ -262,7 +267,7 @@ export default function AdvancesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Total Approved</p>
-              <h3 style={s.summaryValue}>${summary.totalApproved.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>₹{summary.totalApproved.toLocaleString('en-IN')}</h3>
             </div>
           </div>
 
@@ -272,7 +277,7 @@ export default function AdvancesPage({ user, onLogout }) {
             </div>
             <div>
               <p style={s.summaryLabel}>Total Paid</p>
-              <h3 style={s.summaryValue}>${summary.totalPaid.toLocaleString()}</h3>
+              <h3 style={s.summaryValue}>₹{summary.totalPaid.toLocaleString('en-IN')}</h3>
             </div>
           </div>
         </div>
@@ -301,7 +306,7 @@ export default function AdvancesPage({ user, onLogout }) {
               </div>
 
               <div style={s.formField}>
-                <label style={s.label}>Amount ($)</label>
+                <label style={s.label}>Amount (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 1000"
@@ -349,7 +354,9 @@ export default function AdvancesPage({ user, onLogout }) {
                 {advances.map((advance) => (
                   <tr key={advance.id} style={s.tr}>
                     <td style={s.td}>{getDriverName(advance.driver_id)}</td>
-                    <td style={s.td}>${(advance.amount || 0).toLocaleString()}</td>
+                    <td style={s.td}>
+  ₹{(advance.amount || 0).toLocaleString('en-IN')}
+</td>
                     <td style={s.td}>{advance.reason}</td>
                     <td style={s.td}>
                       <select

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
+import { formatCurrency } from '../../app/lib/currency';
 
 function PaymentFormInner({
   trips,
@@ -68,7 +69,7 @@ function PaymentFormInner({
         {selectedTrip && amount && (
           <div style={s.calculationRow}>
             <span>Freight Amount:</span>
-            <span>${selectedTrip.freight_amount?.toLocaleString() || '—'}</span>
+            <span>{formatCurrency(selectedTrip.freight_amount || 0) || '—'}</span>
           </div>
         )}
         <div style={s.calculationRow}>

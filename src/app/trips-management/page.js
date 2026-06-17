@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/currency';
 import DashboardLayout from '../../components/dashboard/layout';
 
 const getStatusColor = (status) => {
@@ -518,7 +519,7 @@ export default function TripsManagementPage({ user, onLogout }) {
             </div>
 
             <div style={s.field}>
-              <label style={s.label}>Freight Amount ($)</label>
+              <label style={s.label}>Freight Amount (₹)</label>
               <input
                 type="number"
                 placeholder="e.g. 5000"
@@ -578,7 +579,7 @@ export default function TripsManagementPage({ user, onLogout }) {
                     <td style={s.td}>{getDriverName(trip.driver_id)}</td>
                     <td style={s.td}>{trip.customer}</td>
                     <td style={s.td}>{trip.origin} → {trip.destination}</td>
-                    <td style={s.td}>${(trip.freight_amount || 0).toLocaleString()}</td>
+                    <td style={s.td}>{formatCurrency(trip.freight_amount || 0)}</td>
                     <td style={s.td}>
                       <select
                         value={trip.status}

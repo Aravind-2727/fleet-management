@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { formatCurrency } from '../lib/currency';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function TripsPage({ user, onLogout }) {
@@ -374,7 +375,7 @@ export default function TripsPage({ user, onLogout }) {
               </div>
 
               <div style={s.formField}>
-                <label style={s.label}>Freight Amount ($)</label>
+                <label style={s.label}>Freight Amount (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 5000"
@@ -469,7 +470,7 @@ export default function TripsPage({ user, onLogout }) {
                     <td style={s.td}>{trip.customer}</td>
                     <td style={s.td}>{trip.drivers?.name?.name || 'Unknown'}</td>
                     <td style={s.td}>{trip.trucks?.truck_number || 'Unknown'}</td>
-                    <td style={s.td}>${(trip.freight_amount || 0).toLocaleString()}</td>
+                    <td style={s.td}>{formatCurrency(trip.freight_amount || 0)}</td>
                     <td style={s.td}>
                       <span style={{ ...s.statusBadge, backgroundColor: `${getStatusColor(trip.status)}15`, color: getStatusColor(trip.status) }}>
                         {trip.status}
