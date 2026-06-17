@@ -54,8 +54,8 @@ export default function TripsPage({ user, onLogout }) {
           received_amount,
           status,
           close_status,
-          start_date,
-          end_date,
+          expected_start_date,
+          expected_end_date,
           created_at,
           drivers(id, profiles(name)),
           trucks(truck_number, status)
@@ -183,8 +183,8 @@ export default function TripsPage({ user, onLogout }) {
             freight_amount: parseFloat(formData.freight_amount),
             received_amount: 0,
             status: 'assigned',
-            start_date: formData.start_date || null,
-            end_date: formData.end_date || null,
+            expected_start_date: formData.start_date || null,
+            expected_end_date: formData.end_date || null,
             notes: formData.notes,
           },
         ]);
@@ -195,7 +195,6 @@ export default function TripsPage({ user, onLogout }) {
         return;
       }
 
-      // Reset form
       setFormData({
         driver_id: '',
         truck_id: '',
@@ -210,10 +209,7 @@ export default function TripsPage({ user, onLogout }) {
         notes: '',
       });
       setShowForm(false);
-
-      // Refresh data
       fetchTrips();
-
       alert('Trip created successfully');
     } catch (error) {
       console.error('Error creating trip:', error);
@@ -468,7 +464,7 @@ export default function TripsPage({ user, onLogout }) {
                   <tr key={trip.id} style={s.tr}>
                     <td style={s.td}>{trip.origin} → {trip.destination}</td>
                     <td style={s.td}>{trip.customer}</td>
-                    <td style={s.td}>{trip.drivers?.name?.name || 'Unknown'}</td>
+                    <td style={s.td}>{trip.drivers?.profiles?.name || 'Unknown'}</td>
                     <td style={s.td}>{trip.trucks?.truck_number || 'Unknown'}</td>
                     <td style={s.td}>{formatCurrency(trip.freight_amount || 0)}</td>
                     <td style={s.td}>
@@ -479,7 +475,7 @@ export default function TripsPage({ user, onLogout }) {
                     <td style={{ ...s.td, textAlign: 'right' }}>
                       <div style={s.actionButtons}>
                         {trip.status === 'assigned' && (
-                          <button 
+                          <button
                             onClick={() => updateTripStatus(trip.id, 'loading')}
                             style={{ ...s.actionBtn, backgroundColor: '#3B82F615', color: '#3B82F6' }}
                           >
@@ -487,7 +483,7 @@ export default function TripsPage({ user, onLogout }) {
                           </button>
                         )}
                         {trip.status === 'loading' && (
-                          <button 
+                          <button
                             onClick={() => updateTripStatus(trip.id, 'in_transit')}
                             style={{ ...s.actionBtn, backgroundColor: '#8B5CF615', color: '#8B5CF6' }}
                           >
@@ -495,7 +491,7 @@ export default function TripsPage({ user, onLogout }) {
                           </button>
                         )}
                         {trip.status === 'in_transit' && (
-                          <button 
+                          <button
                             onClick={() => updateTripStatus(trip.id, 'unloading')}
                             style={{ ...s.actionBtn, backgroundColor: '#EC489915', color: '#EC4899' }}
                           >
@@ -503,15 +499,15 @@ export default function TripsPage({ user, onLogout }) {
                           </button>
                         )}
                         {trip.status === 'unloading' && (
-                          <button 
+                          <button
                             onClick={() => updateTripStatus(trip.id, 'delivered')}
                             style={{ ...s.actionBtn, backgroundColor: '#22C55E15', color: '#22C55E' }}
                           >
                             Mark Delivered
                           </button>
                         )}
-                        {trip.status === 'delivered' && trip.close_status === true && (
-                          <button 
+                        {trip.status === 'delivered' && trip.close_status !== true && (
+                          <button
                             onClick={() => closeTrip(trip.id)}
                             style={{ ...s.actionBtn, backgroundColor: '#F59E0B15', color: '#F59E0B' }}
                           >
