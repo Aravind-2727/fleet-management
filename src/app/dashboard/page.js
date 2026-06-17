@@ -43,6 +43,9 @@ export default function Dashboard() {
   const [overduePayments, setOverduePayments] = useState(0);
   const [tripsInTransit, setTripsInTransit] = useState(0);
   const [tripsWaitingForDelivery, setTripsWaitingForDelivery] = useState(0);
+  const [activeTripsCount, setActiveTripsCount] = useState(0);
+  const [deliveredTripsPendingSettlement, setDeliveredTripsPendingSettlement] = useState(0);
+  const [driverPayableBalance, setDriverPayableBalance] = useState(0);
   const router = useRouter();
 
 
@@ -274,7 +277,7 @@ export default function Dashboard() {
           .order('created_at', { ascending: false }),
         supabase
           .from('drivers')
-          .select('id, profile_id, payment_status, total_earnings, created_at, profiles(name)')
+          .select('id, profile_id, payment_status, created_at, profiles(name)')
           .eq('owner_id', user.id)
           .eq('payment_status', 'pending')
           .order('created_at', { ascending: false })
@@ -376,7 +379,10 @@ export default function Dashboard() {
         customerPaymentsResponse,
         overduePaymentsResponse,
         tripsInTransitResponse,
-        tripsWaitingDeliveryResponse
+        tripsWaitingDeliveryResponse,
+        activeTripsResponse,
+        deliveredTripsResponse,
+        driverPayableResponse
       ] = await Promise.all([
         supabase
           .from('advance_requests')
@@ -407,7 +413,23 @@ export default function Dashboard() {
           .from('trips')
           .select('id, truck_id, driver_id, freight_amount, status, created_at')
           .eq('owner_id', user.id)
-          .eq('status', 'waiting_for_delivery')
+          .eq('status', 'waiting_for_delivery'),
+        supabase
+          .from('trips')
+          .select('id')
+          .eq('owner_id', user.id)
+          .in('status', ['assigned', 'loading', 'in_transit', 'unloading']),
+        supabase
+          .from('trips')
+          .select('id')
+          .eq('owner_id', user.id)
+          .eq('status', 'delivered')
+          .eq('close_status', true),
+        supabase
+          .from('settlements')
+          .select('net_payable')
+          .eq('owner_id', user.id)
+          .eq('payment_status', 'pending')
       ]);
 
       setPendingAdvances(advanceRequestsResponse.data?.length || 0);
@@ -416,6 +438,9 @@ export default function Dashboard() {
       setOverduePayments(overduePaymentsResponse.data?.length || 0);
       setTripsInTransit(tripsInTransitResponse.data?.length || 0);
       setTripsWaitingForDelivery(tripsWaitingDeliveryResponse.data?.length || 0);
+      setActiveTripsCount(activeTripsResponse.data?.length || 0);
+      setDeliveredTripsPendingSettlement(deliveredTripsResponse.data?.length || 0);
+      setDriverPayableBalance(driverPayableResponse.data?.reduce((sum, item) => sum + (item.net_payable || 0), 0) || 0);
     } catch (error) {
       console.error('Error fetching alert data:', error);
     }
@@ -464,6 +489,8 @@ export default function Dashboard() {
         pendingSettlements={pendingSettlements}
         pendingReceivables={pendingCustomerPayments}
         activeTrips={tripsInTransit + tripsWaitingForDelivery}
+        deliveredTripsPendingSettlement={deliveredTripsPendingSettlement}
+        driverPayableBalance={driverPayableBalance}
         onNavigate={(path) => router.push(path)}
       />
 

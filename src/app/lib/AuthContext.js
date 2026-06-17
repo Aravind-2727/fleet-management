@@ -25,22 +25,44 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       try {
         setLoading(true);
-       const { data, error } = await supabase.auth.getSession();
-const session = data?.session;
-const user = session?.user;
+        const { data, error } = await supabase.auth.getSession();
+        const session = data?.session;
+        const user = session?.user;
+        
         if (user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, name, phone, fleet_owner_id')
             .eq('id', user.id)
             .maybeSingle();
 
           if (profileError && profileError.code !== 'PGRST116') {
-            setUserRole('driver');
+            // Create a default driver profile if it doesn't exist
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert([
+                {
+                  id: user.id,
+                  email: user.email,
+                  role: 'driver',
+                  name: user.user_metadata?.name || 'Driver User',
+                  phone: user.user_metadata?.phone || '',
+                  fleet_owner_id: null,
+                },
+              ]);
+            
+            if (!insertError) {
+              setUserRole('driver');
+              setUser(user);
+            } else {
+              setError(insertError.message);
+              setUser(null);
+              setUserRole(null);
+            }
           } else {
             setUserRole(profile?.role || 'driver');
+            setUser(user);
           }
-          setUser(user);
         } else {
           setUser(null);
           setUserRole(null);
@@ -61,16 +83,33 @@ const user = session?.user;
         if (event === 'SIGNED_IN' && session?.user) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('role')
+            .select('role, name, phone, fleet_owner_id')
             .eq('id', session.user.id)
             .maybeSingle();
 
           if (profileError && profileError.code !== 'PGRST116') {
-            setUserRole('driver');
+            // Create a default driver profile if it doesn't exist
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert([
+                {
+                  id: session.user.id,
+                  email: session.user.email,
+                  role: 'driver',
+                  name: session.user.user_metadata?.name || 'Driver User',
+                  phone: session.user.user_metadata?.phone || '',
+                  fleet_owner_id: null,
+                },
+              ]);
+            
+            if (!insertError) {
+              setUserRole('driver');
+              setUser(session.user);
+            }
           } else {
             setUserRole(profile?.role || 'driver');
+            setUser(session.user);
           }
-          setUser(session.user);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setUserRole(null);
@@ -91,8 +130,7 @@ const user = session?.user;
         email,
         password,
       });
-      console.log('DATA:', data);
-      console.log('ERROR:', error);
+      
       if (error) {
         throw error;
       }
@@ -107,21 +145,24 @@ const user = session?.user;
     }
   };
 
-  const signup = async (email, password) => {
+  const signup = async (email, password, name, role = 'owner') => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            name: name,
+          }
+        }
       });
       
       if (error) {
         throw error;
       }
       
-      // Redirect to dashboard after successful signup
-      router.push('/dashboard');
-      
+      // Create profile after successful signup
       if (data.user) {
         const { error: profileError } = await supabase
           .from('profiles')
@@ -129,9 +170,10 @@ const user = session?.user;
             {
               id: data.user.id,
               email: data.user.email,
-              role: 'owner',
-              name: '',
+              role: role,
+              name: name,
               phone: '',
+              fleet_owner_id: null,
             },
           ]);
 
@@ -139,6 +181,9 @@ const user = session?.user;
           throw profileError;
         }
       }
+      
+      // Redirect to dashboard after successful signup
+      router.push('/dashboard');
       
       return data;
     } catch (err) {

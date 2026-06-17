@@ -5,6 +5,8 @@ export default function DashboardAlertCards({
   pendingSettlements,
   pendingReceivables,
   activeTrips,
+  deliveredTripsPendingSettlement,
+  driverPayableBalance,
   onNavigate
 }) {
   const cards = [
@@ -22,6 +24,22 @@ export default function DashboardAlertCards({
       priority: pendingSettlements > 0 ? 'high' : 'low',
       color: pendingSettlements > 0 ? '#EF4444' : '#22C55E',
       link: '/settlements',
+      icon: 'ti ti-wallet',
+    },
+    {
+      title: 'Delivered Trips Pending Settlement',
+      count: deliveredTripsPendingSettlement,
+      priority: deliveredTripsPendingSettlement > 0 ? 'high' : 'low',
+      color: deliveredTripsPendingSettlement > 0 ? '#EF4444' : '#22C55E',
+      link: '/trips',
+      icon: 'ti ti-box',
+    },
+    {
+      title: 'Driver Payable Balance',
+      count: `$${driverPayableBalance.toLocaleString()}`,
+      priority: driverPayableBalance > 0 ? 'medium' : 'low',
+      color: driverPayableBalance > 0 ? '#3B82F6' : '#22C55E',
+      link: '/drivers',
       icon: 'ti ti-wallet',
     },
     {

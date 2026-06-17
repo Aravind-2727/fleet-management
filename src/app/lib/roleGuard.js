@@ -23,9 +23,12 @@ export const roleGuard = (requiredRole) => {
 export const canAccessRoute = (route, userRole) => {
   const routePermissions = {
     '/dashboard': 'any',
+    '/driver/home': 'driver',
+    '/driver/mytrip': 'driver',
     '/trips': 'owner',
     '/trips-management': 'owner',
     '/drivers': 'owner',
+    '/trucks': 'owner',
     '/expenses': 'owner',
     '/advances': 'owner',
     '/settlements': 'owner',
@@ -40,9 +43,12 @@ export const canAccessRoute = (route, userRole) => {
 export const canAccessModule = (module, userRole) => {
   const modulePermissions = {
     'dashboard': 'any',
+    'driver/home': 'driver',
+    'driver/mytrip': 'driver',
     'trips': 'owner',
     'trips-management': 'owner',
     'drivers': 'owner',
+    'trucks': 'owner',
     'expenses': 'owner',
     'advances': 'owner',
     'settlements': 'owner',

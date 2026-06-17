@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useUserRole } from './useUserRole';
+import { useAuth } from './AuthContext';
 import { canAccessRoute } from './roleGuard';
 
 export const withRoleProtection = (WrappedComponent, requiredRoute) => {
   return function ProtectedComponent(props) {
     const router = useRouter();
-    const { userRole, loading } = useUserRole();
+    const { userRole, loading } = useAuth();
 
     if (loading) {
       return (

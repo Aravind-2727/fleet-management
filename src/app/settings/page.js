@@ -1,92 +1,195 @@
 'use client';
 
-import { useState } from 'react';
-import GeneralSettings from '../../components/settings/GeneralSettings';
-import CompanySettings from '../../components/settings/CompanySettings';
-import UserSettings from '../../components/settings/UserSettings';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function SettingsPage({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('general');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [showProfileForm, setShowProfileForm] = useState(false);
 
-  const tabs = [
-    { id: 'general', label: 'General' },
-    { id: 'company', label: 'Company' },
-    { id: 'user', label: 'User' },
-  ];
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    phone: '',
+  });
 
-  const handleSave = async () => {
-    setSaving(true);
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setMessage({ type: 'success', text: 'Settings saved successfully!' });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setProfile(data);
+      setProfileForm({
+        name: data?.name || '',
+        phone: data?.phone || '',
+      });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save settings. Please try again.' });
+      console.error('Error fetching profile:', error);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
+  const saveProfile = async () => {
+    if (!profileForm.name || profileForm.name.trim().length < 2) {
+      alert('Enter valid name (at least 2 characters)');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: profileForm.name.trim(),
+          phone: profileForm.phone.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profile.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        alert(error.message);
+        return;
+      }
+
+      setProfile({
+        ...profile,
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim(),
+      });
+      setShowProfileForm(false);
+      alert('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={s.root}>
+        <div style={s.center}>
+          <div style={s.spinnerRing}><div style={s.spinner} /></div>
+          <p style={s.muted}>Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout user={user} onLogout={onLogout}>
-      <div style={s.root}>
-        <div style={s.container}>
-          <div style={s.header}>
-            <div>
-              <p style={s.headerSub}>System Configuration</p>
-              <h1 style={s.headerTitle}>Settings</h1>
+      <div style={s.shell}>
+        {/* Header */}
+        <div style={s.header}>
+          <div>
+            <p style={s.headerSub}>System</p>
+            <h1 style={s.headerTitle}>Settings</h1>
+          </div>
+        </div>
+
+        {/* Profile Section */}
+        <div style={s.sectionCard}>
+          <h2 style={s.sectionTitle}>Profile Information</h2>
+          <div style={s.profileInfo}>
+            <div style={s.profileAvatar}>
+              <i className="ti ti-user" style={{ fontSize: 32, color: '#7C63FF' }} />
             </div>
-            <button onClick={handleSave} disabled={saving} style={s.saveBtn}>
-              {saving ? 'Saving...' : 'Save Settings'}
+            <div style={s.profileDetails}>
+              <div>
+                <p style={s.detailLabel}>Name</p>
+                <p style={s.detailValue}>{profile?.name || 'Not set'}</p>
+              </div>
+              <div>
+                <p style={s.detailLabel}>Email</p>
+                <p style={s.detailValue}>{profile?.email || 'Not set'}</p>
+              </div>
+              <div>
+                <p style={s.detailLabel}>Role</p>
+                <p style={s.detailValue}>{profile?.role || 'Not set'}</p>
+              </div>
+              <div>
+                <p style={s.detailLabel}>Phone</p>
+                <p style={s.detailValue}>{profile?.phone || 'Not set'}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowProfileForm(true)}
+              style={s.editButton}
+            >
+              Edit Profile
             </button>
           </div>
 
-          {message.text && (
-            <div style={{ ...s.message, ...(message.type === 'success' ? s.messageSuccess : s.messageError) }}>
-              {message.text}
+          {showProfileForm && (
+            <div style={s.profileForm}>
+              <h3 style={s.formTitle}>Edit Profile</h3>
+              <div style={s.formGrid}>
+                <div style={s.formField}>
+                  <label style={s.label}>Name</label>
+                  <input
+                    placeholder="Enter your name"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formField}>
+                  <label style={s.label}>Phone</label>
+                  <input
+                    placeholder="Enter your phone"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                    style={s.input}
+                  />
+                </div>
+              </div>
+              <div style={s.formActions}>
+                <button onClick={saveProfile} style={s.saveBtn}>Save Changes</button>
+                <button onClick={() => setShowProfileForm(false)} style={s.cancelBtn}>Cancel</button>
+              </div>
             </div>
           )}
+        </div>
 
-          <div style={s.tabContainer}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{ ...s.tabBtn, ...(activeTab === tab.id ? s.tabBtnActive : {}) }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={s.content}>
-            {activeTab === 'general' && <GeneralSettings />}
-            {activeTab === 'company' && <CompanySettings />}
-            {activeTab === 'user' && <UserSettings />}
+        {/* Account Section */}
+        <div style={s.sectionCard}>
+          <h2 style={s.sectionTitle}>Account Actions</h2>
+          <div style={s.actionButtons}>
+            <button onClick={() => alert('Password reset functionality would go here')} style={s.actionBtn}>
+              <i className="ti ti-lock" style={{ marginRight: 8 }} /> Change Password
+            </button>
+            <button onClick={() => alert('Email settings functionality would go here')} style={s.actionBtn}>
+              <i className="ti ti-mail" style={{ marginRight: 8 }} /> Email Settings
+            </button>
+            <button onClick={() => alert('Notification settings functionality would go here')} style={s.actionBtn}>
+              <i className="ti ti-bell" style={{ marginRight: 8 }} /> Notification Settings
+            </button>
+            <button onClick={() => alert('Theme settings functionality would go here')} style={s.actionBtn}>
+              <i className="ti ti-palette" style={{ marginRight: 8 }} /> Theme Settings
+            </button>
           </div>
         </div>
       </div>
     </DashboardLayout>
-  );
-}
-
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      textarea:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      button:disabled { opacity: 0.6; cursor: not-allowed; }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
   );
 }
 
@@ -97,7 +200,26 @@ const s = {
     minHeight: '100vh',
     color: '#1A1A1F',
   },
-  container: {
+  center: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    minHeight: '100vh', gap: 16,
+  },
+  spinnerRing: {
+    width: 56, height: 56, borderRadius: '50%',
+    border: '1px solid rgba(124,99,255,0.15)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  spinner: {
+    width: 36, height: 36, borderRadius: '50%',
+    border: '2px solid rgba(124,99,255,0.1)',
+    borderTop: '2px solid #7C63FF',
+    animation: 'spin 0.8s linear infinite',
+  },
+  muted: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    color: 'rgba(20,20,30,0.45)', fontSize: 13,
+  },
+  shell: {
     maxWidth: 1200,
     margin: '0 auto',
     padding: 28,
@@ -105,7 +227,7 @@ const s = {
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 24, flexWrap: 'wrap', gap: 16,
+    marginBottom: 32,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -114,51 +236,134 @@ const s = {
   },
   headerTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: -0.5,
+    fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5,
   },
-  saveBtn: {
-    display: 'flex', alignItems: 'center', gap: 8,
-    background: '#7C63FF', color: '#fff', border: 'none',
-    padding: '11px 20px', borderRadius: 12,
-    cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-    boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
-    transition: 'all 0.15s',
-  },
-  message: {
-    padding: 12, borderRadius: 8, marginBottom: 24,
-    fontSize: 14, fontFamily: "'Outfit', sans-serif",
-  },
-  messageSuccess: {
-    background: 'rgba(34,197,94,0.1)',
-    border: '1px solid rgba(34,197,94,0.25)',
-    color: '#22C55E',
-  },
-  messageError: {
-    background: 'rgba(239,68,68,0.1)',
-    border: '1px solid rgba(239,68,68,0.25)',
-    color: '#EF4444',
-  },
-  tabContainer: {
-    display: 'flex', gap: 12, marginBottom: 28,
-    flexWrap: 'wrap',
-  },
-  tabBtn: {
-    padding: '11px 22px', borderRadius: 12,
-    border: '1px solid rgba(20,20,30,0.07)',
-    background: '#fff', color: 'rgba(20,20,30,0.6)',
-    cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-    transition: 'all 0.15s',
-  },
-  tabBtnActive: {
-    background: '#7C63FF', color: '#fff', border: 'none',
-    boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
-  },
-  content: {
+  sectionCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 16, padding: 28,
-    boxShadow: '0 2px 8px rgba(20,20,30,0.06)',
+    borderRadius: 18,
+    padding: 24,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 20, fontWeight: 600, color: '#1A1A1F', margin: '0 0 20px',
+  },
+  profileInfo: {
+    display: 'flex', alignItems: 'center', gap: 24,
+  },
+  profileAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: '50%',
+    background: 'rgba(124,99,255,0.1)',
+    border: '2px solid rgba(124,99,255,0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileDetails: {
+    flex: 1,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 20,
+  },
+  detailLabel: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase',
+    color: 'rgba(20,20,30,0.4)', margin: '0 0 6px',
+  },
+  detailValue: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 14, fontWeight: 500, color: '#1A1A1F',
+  },
+  editButton: {
+    background: '#7C63FF',
+    color: '#fff',
+    border: 'none',
+    padding: '12px 24px',
+    borderRadius: 12,
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+    boxShadow: '0 4px 12px rgba(124,99,255,0.25)',
+    alignSelf: 'flex-start',
+  },
+  profileForm: {
+    marginTop: 24,
+    padding: 24,
+    background: 'rgba(124,99,255,0.05)',
+    border: '1px solid rgba(124,99,255,0.1)',
+    borderRadius: 12,
+  },
+  formTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 18, fontWeight: 600, margin: '0 0 20px',
+  },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: 16,
+    marginBottom: 20,
+  },
+  formField: {
+    marginBottom: 14,
+  },
+  label: {
+    display: 'block',
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
+    color: 'rgba(20,20,30,0.4)', marginBottom: 8,
+  },
+  input: {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1px solid rgba(20,20,30,0.1)',
+    background: '#F7F7FA',
+    fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+    color: '#1A1A1F',
+    boxSizing: 'border-box',
+    transition: 'all 0.15s',
+  },
+  formActions: {
+    display: 'flex', gap: 10, marginTop: 20,
+  },
+  saveBtn: {
+    background: '#22C55E', color: '#fff', border: 'none',
+    padding: '11px 22px', borderRadius: 12,
+    cursor: 'pointer', fontWeight: 600, fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+  },
+  cancelBtn: {
+    background: '#fff', color: 'rgba(20,20,30,0.5)',
+    border: '1px solid rgba(20,20,30,0.1)',
+    padding: '11px 22px', borderRadius: 12,
+    cursor: 'pointer', fontWeight: 600, fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+  },
+  actionButtons: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: 16,
+  },
+  actionBtn: {
+    display: 'flex', alignItems: 'center',
+    background: '#fff',
+    border: '1px solid rgba(20,20,30,0.07)',
+    padding: '16px 20px',
+    borderRadius: 14,
+    cursor: 'pointer',
+    fontWeight: 500,
+    fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+    color: '#1A1A1F',
+    transition: 'all 0.2s',
+    ':hover': {
+      background: '#F7F7FA',
+      borderColor: 'rgba(124,99,255,0.25)',
+    },
   },
 };

@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
+
 function SettlementFormInner({
   drivers,
   trips,
@@ -138,20 +145,20 @@ function SettlementFormInner({
           <h4 style={s.calculationTitle}>Settlement Calculation</h4>
           <div style={s.calculationRow}>
             <span>Driver Earnings:</span>
-            <span>${settlement.earnings.toLocaleString()}</span>
+            <span>{formatCurrency(settlement.earnings)}</span>
           </div>
           <div style={s.calculationRow}>
             <span>Expenses:</span>
-            <span>+$${settlement.expenses.toLocaleString()}</span>
+            <span>+{formatCurrency(settlement.expenses)}</span>
           </div>
           <div style={s.calculationRow}>
             <span>Advances Deducted:</span>
-            <span>-${settlement.advances.toLocaleString()}</span>
+            <span>-{formatCurrency(settlement.advances)}</span>
           </div>
           <div style={{ ...s.calculationRow, fontWeight: 700, fontSize: 16 }}>
             <span>Net Payable:</span>
             <span style={{ color: settlement.netPayable >= 0 ? '#22C55E' : '#E0524A' }}>
-              ${Math.abs(settlement.netPayable).toLocaleString()}
+              {formatCurrency(Math.abs(settlement.netPayable))}
             </span>
           </div>
         </div>

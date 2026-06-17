@@ -12,12 +12,14 @@ export default function ExpensesPage({ user, onLogout }) {
   const [formLoading, setFormLoading] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
-  const [tripId, setTripId] = useState('');
-  const [driverId, setDriverId] = useState('');
-  const [category, setCategory] = useState('Fuel');
-  const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState('driver_paid');
-  const [notes, setNotes] = useState('');
+  const [formData, setFormData] = useState({
+    tripId: '',
+    driverId: '',
+    category: 'Fuel',
+    amount: '',
+    paidBy: 'driver_paid',
+    notes: '',
+  });
 
   const [summary, setSummary] = useState({
     total: 0,
@@ -32,138 +34,32 @@ export default function ExpensesPage({ user, onLogout }) {
     fetchDrivers();
   }, []);
 
-  const saveExpense = async () => {
-    if (!tripId || !driverId || !amount) {
-      alert('Please fill all required fields');
-      return;
-    }
-
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('Please enter a valid positive amount');
-      return;
-    }
-
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      alert('Not authenticated. Please login again.');
-      return;
-    }
-
-    setFormLoading(true);
-    const { error } = await supabase
-      .from('trip_expenses')
-      .insert([
-        {
-          owner_id: authUser.id,
-          trip_id: tripId,
-          driver_id: driverId,
-          category: category,
-          amount: parsedAmount,
-          paid_by: paidBy,
-          status: 'pending',
-          notes: notes,
-        },
-      ]);
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      setFormLoading(false);
-      return;
-    }
-
-    setTripId('');
-    setDriverId('');
-    setCategory('Fuel');
-    setAmount('');
-    setPaidBy('driver_paid');
-    setNotes('');
-    setShowForm(false);
-
-    fetchExpenses();
-    setFormLoading(false);
-
-    alert('Expense added successfully');
-  };
-
-  const updateExpenseStatus = async (id, newStatus) => {
-    const { error } = await supabase
-      .from('trip_expenses')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    fetchExpenses();
-  };
-
-  const deleteExpense = async (id) => {
-    if (!confirm('Are you sure you want to delete this expense?')) {
-      return;
-    }
-
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      alert('Not authenticated. Please login again.');
-      return;
-    }
-
-    // Verify ownership before delete
-    const { data: expense, error: fetchError } = await supabase
-      .from('trip_expenses')
-      .select('owner_id')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (fetchError || !expense) {
-      alert('Expense not found');
-      return;
-    }
-
-    if (expense.owner_id !== authUser.id) {
-      alert('Unauthorized to delete this expense');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('trip_expenses')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    fetchExpenses();
-  };
-
   const fetchExpenses = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      setExpenses([]);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setExpenses([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('trip_expenses')
+        .select('*')
+        .eq('owner_id', authUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching expenses:', error);
+      } else {
+        setExpenses(data || []);
+        calculateSummary(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase
-      .from('trip_expenses')
-      .select('*')
-      .eq('owner_id', authUser.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(error);
-    } else {
-      setExpenses(data || []);
-      calculateSummary(data || []);
-    }
-
-    setLoading(false);
   };
 
   const calculateSummary = (expensesData) => {
@@ -178,49 +74,200 @@ export default function ExpensesPage({ user, onLogout }) {
       .filter(expense => expense.status === 'pending')
       .reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
-    setSummary({
-      total,
-      driverPaid,
-      companyPaid,
-      pending
-    });
+    setSummary({ total, driverPaid, companyPaid, pending });
   };
 
   const fetchTrips = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      setTrips([]);
-      return;
-    }
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setTrips([]);
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from('trips')
-      .select('id, customer')
-      .eq('owner_id', authUser.id);
+      const { data, error } = await supabase
+        .from('trips')
+        .select('id, customer')
+        .eq('owner_id', authUser.id);
 
-    if (error) {
+      if (error) {
+        console.error('Error fetching trips:', error);
+      } else {
+        setTrips(data || []);
+      }
+    } catch (error) {
       console.error('Error fetching trips:', error);
-    } else {
-      setTrips(data || []);
     }
   };
 
   const fetchDrivers = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      setDrivers([]);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setDrivers([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, profile_id, profiles(name)')
+        .eq('owner_id', authUser.id);
+
+      if (error) {
+        console.error('Error fetching drivers:', error);
+      } else {
+        setDrivers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
+
+  const saveExpense = async () => {
+    if (!formData.tripId || !formData.driverId || !formData.amount) {
+      alert('Please fill all required fields');
       return;
     }
 
-    const { data, error } = await supabase
-      .from('drivers')
-      .select('id, profile_id, profiles(name)')
-      .eq('owner_id', authUser.id);
+    const parsedAmount = parseFloat(formData.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid positive amount');
+      return;
+    }
 
-    if (error) {
-      console.error('Error fetching drivers:', error);
-    } else {
-      setDrivers(data || []);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        alert('Not authenticated. Please login again.');
+        return;
+      }
+
+      setFormLoading(true);
+      const { error } = await supabase
+        .from('trip_expenses')
+        .insert([
+          {
+            owner_id: authUser.id,
+            trip_id: formData.tripId,
+            driver_id: formData.driverId,
+            category: formData.category,
+            amount: parsedAmount,
+            paid_by: formData.paidBy,
+            status: 'pending',
+            notes: formData.notes,
+          },
+        ]);
+
+      if (error) {
+        console.error('Error creating expense:', error);
+        alert(error.message);
+        setFormLoading(false);
+        return;
+      }
+
+      setFormData({
+        tripId: '',
+        driverId: '',
+        category: 'Fuel',
+        amount: '',
+        paidBy: 'driver_paid',
+        notes: '',
+      });
+      setShowForm(false);
+
+      fetchExpenses();
+      setFormLoading(false);
+      alert('Expense added successfully');
+    } catch (error) {
+      console.error('Error creating expense:', error);
+      alert('Failed to create expense. Please try again.');
+      setFormLoading(false);
+    }
+  };
+
+  const updateExpenseStatus = async (id, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('trip_expenses')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error updating expense status:', error);
+      alert('Failed to update expense status. Please try again.');
+    }
+  };
+
+  const deleteExpense = async (id) => {
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        alert('Not authenticated. Please login again.');
+        return;
+      }
+
+      // Verify ownership before delete
+      const { data: expense, error: fetchError } = await supabase
+        .from('trip_expenses')
+        .select('owner_id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (fetchError || !expense) {
+        alert('Expense not found');
+        return;
+      }
+
+      if (expense.owner_id !== authUser.id) {
+        alert('Unauthorized to delete this expense');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('trip_expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      alert('Failed to delete expense. Please try again.');
+    }
+  };
+
+  const getTripCustomer = (id) => {
+    const trip = trips.find(t => t.id === id);
+    return trip ? trip.customer : 'Unknown';
+  };
+
+  const getDriverName = (id) => {
+    const driver = drivers.find(d => d.id === id);
+    return driver ? driver.profiles?.name : 'Unknown';
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return '#FB923C';
+      case 'paid':
+        return '#3B82F6';
+      case 'approved':
+        return '#22C55E';
+      default:
+        return '#6B7280';
     }
   };
 
@@ -235,43 +282,10 @@ export default function ExpensesPage({ user, onLogout }) {
     );
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending':
-        return s.statusPending.background;
-      case 'paid':
-        return s.statusPaid.background;
-      case 'approved':
-        return s.statusApproved.background;
-      default:
-        return s.statusDefault.background;
-    }
-  };
-
-  const validateForm = () => {
-    const amount = parseFloat(amount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid positive amount');
-      return false;
-    }
-    return true;
-  };
-
-  const getTripCustomer = (id) => {
-    const trip = trips.find(t => t.id === id);
-    return trip ? trip.customer : 'Unknown';
-  };
-
-  const getDriverName = (id) => {
-    const driver = drivers.find(d => d.id === id);
-    return driver ? driver.profiles?.name : 'Unknown';
-  };
-
   return (
     <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
-
-        {/* ── HEADER ── */}
+        {/* Header */}
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
@@ -283,7 +297,7 @@ export default function ExpensesPage({ user, onLogout }) {
           </button>
         </div>
 
-        {/* ── SUMMARY CARDS ── */}
+        {/* Summary Cards */}
         <div style={s.summaryGrid}>
           <div style={s.summaryCard}>
             <div style={s.summaryIcon}>
@@ -326,91 +340,93 @@ export default function ExpensesPage({ user, onLogout }) {
           </div>
         </div>
 
-        {/* ── ADD FORM ── */}
+        {/* Add Form */}
         {showForm && (
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add New Expense</h3>
 
-            <div style={s.field}>
-              <label style={s.label}>Trip</label>
-              <select
-                value={tripId}
-                onChange={(e) => setTripId(e.target.value)}
-                style={s.input}
-              >
-                <option value="">Select Trip</option>
-                {trips.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    {trip.customer}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <div style={s.formGrid}>
+              <div style={s.formField}>
+                <label style={s.label}>Trip</label>
+                <select
+                  value={formData.tripId}
+                  onChange={(e) => setFormData({...formData, tripId: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="">Select Trip</option>
+                  {trips.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.customer}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Driver</label>
-              <select
-                value={driverId}
-                onChange={(e) => setDriverId(e.target.value)}
-                style={s.input}
-              >
-                <option value="">Select Driver</option>
-                {drivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.profiles?.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Driver</label>
+                <select
+                  value={formData.driverId}
+                  onChange={(e) => setFormData({...formData, driverId: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="">Select Driver</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.profiles?.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                style={s.input}
-              >
-                <option value="Fuel">Fuel</option>
-                <option value="Toll">Toll</option>
-                <option value="Food">Food</option>
-                <option value="Repair">Repair</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Category</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="Fuel">Fuel</option>
+                  <option value="Toll">Toll</option>
+                  <option value="Food">Food</option>
+                  <option value="Repair">Repair</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Amount ($)</label>
-              <input
-                type="number"
-                placeholder="e.g. 150"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                style={s.input}
-              />
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Amount ($)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 150"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  style={s.input}
+                />
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Paid By</label>
-              <select
-                value={paidBy}
-                onChange={(e) => setPaidBy(e.target.value)}
-                style={s.input}
-              >
-                <option value="driver_paid">Driver Paid</option>
-                <option value="company_paid">Company Paid</option>
-              </select>
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Paid By</label>
+                <select
+                  value={formData.paidBy}
+                  onChange={(e) => setFormData({...formData, paidBy: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="driver_paid">Driver Paid</option>
+                  <option value="company_paid">Company Paid</option>
+                </select>
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Notes</label>
-              <input
-                placeholder="e.g. Gas for trip to LA"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                style={s.input}
-              />
+              <div style={s.formField}>
+                <label style={s.label}>Notes</label>
+                <input
+                  placeholder="e.g. Gas for trip to LA"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  style={s.input}
+                />
+              </div>
             </div>
 
             <div style={s.formActions}>
@@ -422,7 +438,7 @@ export default function ExpensesPage({ user, onLogout }) {
           </div>
         )}
 
-        {/* ── TABLE ── */}
+        {/* Table */}
         {expenses.length === 0 ? (
           <div style={s.empty}>No expenses found</div>
         ) : (
@@ -447,7 +463,7 @@ export default function ExpensesPage({ user, onLogout }) {
                     <td style={s.td}>{expense.category}</td>
                     <td style={s.td}>${(expense.amount || 0).toLocaleString()}</td>
                     <td style={s.td}>
-                      <span style={expense.paid_by === 'driver_paid' ? s.paidByDriver : s.paidByCompany}>
+                      <span style={{ ...s.paidByBadge, backgroundColor: expense.paid_by === 'driver_paid' ? '#22C55E15' : '#3B82F615', color: expense.paid_by === 'driver_paid' ? '#16A34A' : '#2563EB' }}>
                         {expense.paid_by === 'driver_paid' ? 'Driver' : 'Company'}
                       </span>
                     </td>
@@ -478,21 +494,6 @@ export default function ExpensesPage({ user, onLogout }) {
   );
 }
 
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
-  );
-}
-
 const s = {
   root: {
     fontFamily: "'Outfit', sans-serif",
@@ -501,8 +502,7 @@ const s = {
     color: '#1A1A1F',
   },
   center: {
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     minHeight: '100vh', gap: 16,
   },
   spinnerRing: {
@@ -520,15 +520,12 @@ const s = {
     fontFamily: "'Space Grotesk', sans-serif",
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
-
   shell: {
     maxWidth: 1200,
     margin: '0 auto',
     padding: 28,
     boxSizing: 'border-box',
   },
-
-  /* ── HEADER ── */
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: 24, flexWrap: 'wrap', gap: 16,
@@ -550,8 +547,6 @@ const s = {
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
   },
-
-  /* ── SUMMARY CARDS ── */
   summaryGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
@@ -591,8 +586,6 @@ const s = {
     margin: 0,
     color: '#1A1A1F',
   },
-
-  /* ── FORM CARD ── */
   formCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
@@ -608,7 +601,15 @@ const s = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: 16, fontWeight: 600, margin: '0 0 18px',
   },
-  field: { marginBottom: 14 },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: 16,
+    marginBottom: 20,
+  },
+  formField: {
+    marginBottom: 14,
+  },
   label: {
     display: 'block',
     fontFamily: "'Space Grotesk', sans-serif",
@@ -643,8 +644,6 @@ const s = {
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
   },
-
-  /* ── TABLE ── */
   empty: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
@@ -702,46 +701,12 @@ const s = {
     cursor: 'pointer', fontWeight: 600, fontSize: 13,
     fontFamily: "'Outfit', sans-serif",
   },
-
-  /* ── STATUS COLORS ── */
-  statusPending: {
-    background: 'rgba(251,146,60,0.1)',
-    border: '1px solid rgba(251,146,60,0.25)',
-    color: '#FB923C',
-  },
-  statusPaid: {
-    background: 'rgba(59,130,246,0.1)',
-    border: '1px solid rgba(59,130,246,0.25)',
-    color: '#3B82F6',
-  },
-  statusApproved: {
-    background: 'rgba(34,197,94,0.1)',
-    border: '1px solid rgba(34,197,94,0.25)',
-    color: '#22C55E',
-  },
-  statusDefault: {
-    background: 'rgba(107,114,128,0.1)',
-    border: '1px solid rgba(107,114,128,0.25)',
-    color: '#6B7280',
-  },
-
-  /* ── PAID BY BADGES ── */
-  paidByDriver: {
+  paidByBadge: {
     display: 'inline-block',
-    background: 'rgba(34,197,94,0.1)',
-    border: '1px solid rgba(34,197,94,0.25)',
-    color: '#16A34A',
-    borderRadius: 20, padding: '4px 12px',
-    fontSize: 12, fontWeight: 600,
-    fontFamily: "'Space Grotesk', sans-serif",
-  },
-  paidByCompany: {
-    display: 'inline-block',
-    background: 'rgba(59,130,246,0.1)',
-    border: '1px solid rgba(59,130,246,0.25)',
-    color: '#2563EB',
-    borderRadius: 20, padding: '4px 12px',
-    fontSize: 12, fontWeight: 600,
+    padding: '4px 12px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
   },
 };

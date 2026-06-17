@@ -10,45 +10,54 @@ export default function MyTrip() {
   const [trip, setTrip] = useState(null);
   const [statusOptions] = useState(['assigned', 'loading', 'in_transit', 'unloading', 'delivered']);
   const [statusIndex, setStatusIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (!user) return;
 
     const fetchAssignedTrip = async () => {
-       const { data, error } = await supabase
-        .from('trips')
-        .select('id, status, route, customer_name, truck_name, start_location, end_location, created_at')
-        .eq('status', 'assigned')
-        .single();
+      try {
+        setLoading(true);
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Trip fetch error:', error);
-        return;
-      }
+        // Get driver ID from profiles
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single();
 
-      // Use a subquery to get driver id from auth user's profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          return;
+        }
 
-      if (profileError) return;
+        const driverId = profile?.id;
+        if (!driverId) return;
 
-      const { data: assignedTrip, error: assignedError } = await supabase
-        .from('trips')
-        .select('id, status, route, customer_name, truck_name, start_location, end_location, created_at')
-        .eq('driver_id', profileData?.id)
-        .eq('status', 'assigned')
-        .single();
+        const { data, error } = await supabase
+          .from('trips')
+          .select('id, status, origin, destination, customer, truck_name, start_location, end_location, created_at, owner_id, driver_id')
+          .eq('driver_id', driverId)
+          .eq('status', 'assigned')
+          .single();
 
-      if (!assignedError && assignedTrip) {
-        setTrip(assignedTrip);
-        // Determine current index in status flow
-        const currentStatus = assignedTrip.status;
-        const idx = statusOptions.indexOf(currentStatus);
-        setStatusIndex(idx);
+        if (error && error.code !== 'PGRST116') {
+          console.error('Trip fetch error:', error);
+          return;
+        }
+
+        if (data) {
+          setTrip(data);
+          // Determine current index in status flow
+          const currentStatus = data.status;
+          const idx = statusOptions.indexOf(currentStatus);
+          setStatusIndex(idx);
+        }
+      } catch (error) {
+        console.error('Error fetching assigned trip:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -59,71 +68,268 @@ export default function MyTrip() {
   const nextStatusIdx = statusIndex + 1;
   const nextStatus = nextStatusIdx < statusOptions.length ? statusOptions[nextStatusIdx] : null;
 
-  const canUpdateStatus = nextStatus !== null;
+  const canUpdateStatus = nextStatus !== null && currentStatus !== 'delivered';
 
   const updateStatus = async () => {
-    if (!nextStatus) return;
+    if (!nextStatus || !trip) return;
 
-    const { data, error } = await supabase
-      .from('trips')
-      .update({ status: nextStatus })
-      .eq('id', trip?.id)
-      .select('id')
-      .single();
+    try {
+      setLoading(true);
 
-    if (error) {
-      console.error('Status update error:', error);
-      return;
-    }
+      const { data, error } = await supabase
+        .from('trips')
+        .update({ status: nextStatus })
+        .eq('id', trip.id)
+        .select('id, status')
+        .single();
 
-    // Refresh trip data
-    const { data: refreshedTrip, error: refreshError } = await supabase
-      .from('trips')
-      .select('status')
-      .eq('id', trip?.id)
-      .single();
+      if (error) {
+        console.error('Status update error:', error);
+        alert(error.message);
+        return;
+      }
 
-    if (!refreshError) {
-      setTrip({ ...trip, status: refreshedTrip.status });
+      // Refresh trip data
+      setTrip({ ...trip, status: data.status });
       // Update statusIndex if needed
-      const newIdx = statusOptions.indexOf(refreshedTrip.status);
+      const newIdx = statusOptions.indexOf(data.status);
       setStatusIndex(newIdx);
+
+      alert(`Status updated to ${nextStatus}`);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div style={s.root}>
+        <div style={s.center}>
+          <div style={s.spinnerRing}><div style={s.spinner} /></div>
+          <p style={s.muted}>Loading trip...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!trip) {
-    return <div>Loading assigned trip...</div>;
+    return (
+      <div style={s.root}>
+        <div style={s.center}>
+          <h2>No Assigned Trip</h2>
+          <p style={s.muted}>You don't have any assigned trips at the moment.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h2>My Trip</h2>
-      <p><strong>Route:</strong> {trip.route}</p>
-      <p><strong>Customer:</strong> {trip.customer_name}</p>
-      <p><strong>Truck:</strong> {trip.truck_name}</p>
-      <p><strong>Start Location:</strong> {trip.start_location}</p>
-      <p><strong>End Location:</strong> {trip.end_location}</p>
-      <p><strong>Started:</strong> {trip.created_at}</p>
+    <div style={s.root}>
+      <div style={s.header}>
+        <div>
+          <p style={s.headerSub}>Driver</p>
+          <h1 style={s.headerTitle}>My Trip</h1>
+        </div>
+      </div>
 
-      <p><strong>Current Status:</strong> {trip.status}</p>
+      <div style={s.card}>
+        <div style={s.cardHeader}>
+          <h3 style={s.cardTitle}>Trip Details</h3>
+          <span style={{ ...s.statusBadge, backgroundColor: `${getStatusColor(currentStatus)}15`, color: getStatusColor(currentStatus) }}>
+            {currentStatus}
+          </span>
+        </div>
+        <div style={s.cardContent}>
+          <div style={s.detailsGrid}>
+            <div>
+              <p style={s.detailLabel}>Route</p>
+              <p style={s.detailValue}>{trip.origin} → {trip.destination}</p>
+            </div>
+            <div>
+              <p style={s.detailLabel}>Customer</p>
+              <p style={s.detailValue}>{trip.customer}</p>
+            </div>
+            <div>
+              <p style={s.detailLabel}>Truck</p>
+              <p style={s.detailValue}>{trip.truck_name}</p>
+            </div>
+            <div>
+              <p style={s.detailLabel}>Start Location</p>
+              <p style={s.detailValue}>{trip.start_location}</p>
+            </div>
+            <div>
+              <p style={s.detailLabel}>End Location</p>
+              <p style={s.detailValue}>{trip.end_location}</p>
+            </div>
+            <div>
+              <p style={s.detailLabel}>Started</p>
+              <p style={s.detailValue}>{new Date(trip.created_at).toLocaleDateString()}</p>
+            </div>
+          </div>
 
-      {canUpdateStatus ? (
-           <button
-             onClick={updateStatus}
-             style={{
-               background: '#7C63FF',
-               color: '#fff',
-               border: 'none',
-               padding: '8px 16px',
-               borderRadius: '4px',
-               cursor: 'pointer'
-             }}
-           >
-             {nextStatus}
-           </button>
-      ) : (
-        <p>Trip completed.</p>
-      )}
+          {canUpdateStatus ? (
+            <div style={s.actionSection}>
+              <h4 style={s.actionTitle}>Next Action</h4>
+              <p style={s.actionText}>Update trip status to: <strong>{nextStatus}</strong></p>
+              <button 
+                onClick={updateStatus}
+                disabled={loading}
+                style={s.updateButton}
+              >
+                {loading ? 'Updating...' : `Update to ${nextStatus}`}
+              </button>
+            </div>
+          ) : (
+            <div style={s.completedSection}>
+              <h4 style={s.actionTitle}>Trip Status</h4>
+              <p style={s.completedText}>Trip has been completed successfully.</p>
+              <span style={{ ...s.statusBadge, backgroundColor: '#22C55E15', color: '#22C55E' }}>
+                Completed
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
+
+const getStatusColor = (status) => {
+  const colors = {
+    'assigned': '#3B82F6',
+    'loading': '#FB923C',
+    'in_transit': '#8B5CF6',
+    'unloading': '#EC4899',
+    'delivered': '#22C55E',
+  };
+  return colors[status] || '#6B7280';
+};
+
+const s = {
+  root: {
+    fontFamily: "'Outfit', sans-serif",
+    background: '#F7F7FA',
+    minHeight: '100vh',
+    color: '#1A1A1F',
+    padding: 24,
+    boxSizing: 'border-box',
+  },
+  center: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    minHeight: '100vh', gap: 16,
+  },
+  spinnerRing: {
+    width: 56, height: 56, borderRadius: '50%',
+    border: '1px solid rgba(124,99,255,0.15)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  spinner: {
+    width: 36, height: 36, borderRadius: '50%',
+    border: '2px solid rgba(124,99,255,0.1)',
+    borderTop: '2px solid #7C63FF',
+    animation: 'spin 0.8s linear infinite',
+  },
+  muted: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    color: 'rgba(20,20,30,0.45)', fontSize: 13,
+  },
+  header: {
+    marginBottom: 32,
+  },
+  headerSub: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
+    color: 'rgba(20,20,30,0.4)', margin: '0 0 6px',
+  },
+  headerTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5,
+  },
+  card: {
+    background: '#fff',
+    border: '1px solid rgba(20,20,30,0.07)',
+    borderRadius: 18,
+    padding: 24,
+    boxShadow: '0 2px 8px rgba(20,20,30,0.06)',
+  },
+  cardHeader: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 24,
+  },
+  cardTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 20, fontWeight: 600, color: '#1A1A1F', margin: 0,
+  },
+  cardContent: {
+    // Content styles
+  },
+  detailsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: 24,
+    marginBottom: 32,
+  },
+  detailLabel: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase',
+    color: 'rgba(20,20,30,0.4)', margin: '0 0 8px',
+  },
+  detailValue: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 16, fontWeight: 500, color: '#1A1A1F',
+  },
+  statusBadge: {
+    display: 'inline-block',
+    padding: '4px 12px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
+    fontFamily: "'Space Grotesk', sans-serif",
+    textTransform: 'capitalize',
+  },
+  actionSection: {
+    background: 'rgba(124,99,255,0.05)',
+    border: '1px solid rgba(124,99,255,0.1)',
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 24,
+  },
+  actionTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: '0 0 8px',
+  },
+  actionText: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 14, color: 'rgba(20,20,30,0.7)', margin: '0 0 16px',
+  },
+  updateButton: {
+    background: '#7C63FF',
+    color: '#fff',
+    border: 'none',
+    padding: '10px 20px',
+    borderRadius: 12,
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: 14,
+    fontFamily: "'Outfit', sans-serif",
+    boxShadow: '0 4px 12px rgba(124,99,255,0.25)',
+    ':disabled': {
+      opacity: 0.6,
+      cursor: 'not-allowed',
+    },
+  },
+  completedSection: {
+    textAlign: 'center',
+    padding: 20,
+    background: 'rgba(34,197,94,0.05)',
+    border: '1px solid rgba(34,197,94,0.1)',
+    borderRadius: 12,
+  },
+  completedText: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 14, color: '#16A34A', marginBottom: 16,
+  },
+};

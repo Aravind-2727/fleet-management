@@ -3,408 +3,103 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
-import ReportFilters from '@/components/reports/ReportFilters';
-import ReportStats from '@/components/reports/ReportStats';
-import ReportTable from '@/components/reports/ReportTable';
 
 export default function ReportsPage({ user, onLogout }) {
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeReport, setActiveReport] = useState('trip');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [selectedDriver, setSelectedDriver] = useState('');
-  const [selectedTruck, setSelectedTruck] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    outstandingReceivables: 0
-  });
-
-  const [drivers, setDrivers] = useState([]);
-  const [trucks, setTrucks] = useState([]);
-
-  const [tripData, setTripData] = useState([]);
-  const [expenseData, setExpenseData] = useState([]);
-  const [settlementData, setSettlementData] = useState([]);
-  const [paymentData, setPaymentData] = useState([]);
-
-  const [filteredTripData, setFilteredTripData] = useState([]);
-  const [filteredExpenseData, setFilteredExpenseData] = useState([]);
-  const [filteredSettlementData, setFilteredSettlementData] = useState([]);
-  const [filteredPaymentData, setFilteredPaymentData] = useState([]);
-
-  const reports = [
-    { id: 'trip', label: 'Trip Report' },
-    { id: 'expense', label: 'Expense Report' },
-    { id: 'settlement', label: 'Driver Settlement Report' },
-    { id: 'payment', label: 'Customer Payment Report' },
-  ];
 
   useEffect(() => {
-    fetchFiltersData();
+    fetchReports();
   }, []);
 
-  useEffect(() => {
-    if (activeReport === 'trip') {
-      fetchTripData();
-    } else if (activeReport === 'expense') {
-      fetchExpenseData();
-    } else if (activeReport === 'settlement') {
-      fetchSettlementData();
-    } else if (activeReport === 'payment') {
-      fetchPaymentData();
-    }
-  }, [activeReport]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [activeReport, dateRange, selectedDriver, selectedTruck, selectedStatus, searchQuery]);
-
-  const fetchFiltersData = async () => {
+  const fetchReports = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) return;
+      if (!authUser) {
+        setReports([]);
+        setLoading(false);
+        return;
+      }
 
-      const [driversResponse, trucksResponse] = await Promise.all([
-        supabase.from('drivers').select('id, profiles(name)').eq('owner_id', authUser.id).limit(50),
-        supabase.from('trucks').select('id, truck_number').eq('owner_id', authUser.id).limit(50),
+      // Get financial summary
+      const [
+        tripsResponse,
+        expensesResponse,
+        advancesResponse,
+        settlementsResponse,
+        paymentsResponse
+      ] = await Promise.all([
+        supabase
+          .from('trips')
+          .select('id, freight_amount, status')
+          .eq('owner_id', authUser.id),
+        supabase
+          .from('trip_expenses')
+          .select('amount, paid_by')
+          .eq('owner_id', authUser.id),
+        supabase
+          .from('advance_requests')
+          .select('amount, status')
+          .eq('owner_id', authUser.id),
+        supabase
+          .from('settlements')
+          .select('net_payable, payment_status')
+          .eq('owner_id', authUser.id),
+        supabase
+          .from('payments')
+          .select('amount')
+          .eq('owner_id', authUser.id)
       ]);
 
-      setDrivers(driversResponse.data || []);
-      setTrucks(trucksResponse.data || []);
+      const trips = tripsResponse.data || [];
+      const expenses = expensesResponse.data || [];
+      const advances = advancesResponse.data || [];
+      const settlements = settlementsResponse.data || [];
+      const payments = paymentsResponse.data || [];
+
+      const reportData = [
+        {
+          title: 'Trip Summary',
+          total: trips.reduce((sum, trip) => sum + (trip.freight_amount || 0), 0),
+          count: trips.length,
+          icon: 'ti ti-truck',
+          color: '#3B82F6',
+        },
+        {
+          title: 'Total Expenses',
+          total: expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0),
+          count: expenses.length,
+          icon: 'ti ti-receipt',
+          color: '#FB923C',
+        },
+        {
+          title: 'Advance Requests',
+          total: advances.reduce((sum, advance) => sum + (advance.amount || 0), 0),
+          count: advances.length,
+          icon: 'ti ti-credit-card',
+          color: '#8B5CF6',
+        },
+        {
+          title: 'Settlements',
+          total: settlements.reduce((sum, settlement) => sum + (settlement.net_payable || 0), 0),
+          count: settlements.length,
+          icon: 'ti ti-wallet',
+          color: '#22C55E',
+        },
+        {
+          title: 'Total Payments',
+          total: payments.reduce((sum, payment) => sum + (payment.amount || 0), 0),
+          count: payments.length,
+          icon: 'ti ti-money',
+          color: '#7C63FF',
+        },
+      ];
+
+      setReports(reportData);
     } catch (error) {
-      console.error('Error fetching filters data:', error);
-    }
-  };
-
-  const fetchTripData = async () => {
-    setLoading(true);
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setTripData([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('owner_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching trip data:', error);
-      } else {
-        setTripData(data || []);
-        calculateStats(data || [], 'trip');
-      }
-    } catch (error) {
-      console.error('Error fetching trip data:', error);
+      console.error('Error fetching reports:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchExpenseData = async () => {
-    setLoading(true);
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setExpenseData([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('trip_expenses')
-        .select('*')
-        .eq('owner_id', authUser.id)
-        .order('expense_date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching expense data:', error);
-      } else {
-        setExpenseData(data || []);
-        calculateStats(data || [], 'expense');
-      }
-    } catch (error) {
-      console.error('Error fetching expense data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSettlementData = async () => {
-    setLoading(true);
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setSettlementData([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('settlements')
-        .select('*')
-        .eq('owner_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching settlement data:', error);
-      } else {
-        setSettlementData(data || []);
-        calculateStats(data || [], 'settlement');
-      }
-    } catch (error) {
-      console.error('Error fetching settlement data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPaymentData = async () => {
-    setLoading(true);
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setPaymentData([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('customer_payments')
-        .select('*')
-        .eq('owner_id', authUser.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching payment data:', error);
-      } else {
-        setPaymentData(data || []);
-        calculateStats(data || [], 'payment');
-      }
-    } catch (error) {
-      console.error('Error fetching payment data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateStats = (data, reportType) => {
-    let totalRevenue = 0;
-    let totalExpenses = 0;
-    let outstandingReceivables = 0;
-
-    if (reportType === 'trip') {
-      totalRevenue = data.reduce((sum, item) => sum + (item.freight_amount || 0), 0);
-      totalExpenses = data.reduce((sum, item) => sum + (item.expenses || 0), 0);
-      outstandingReceivables = data.reduce((sum, item) => sum + (item.outstanding || 0), 0);
-    } else if (reportType === 'expense') {
-      totalExpenses = data.reduce((sum, item) => sum + (item.amount || 0), 0);
-      totalRevenue = 0;
-      outstandingReceivables = data.reduce((sum, item) => sum + (item.outstanding || 0), 0);
-    } else if (reportType === 'settlement') {
-      totalRevenue = data.reduce((sum, item) => sum + (item.earnings || 0), 0);
-      totalExpenses = data.reduce((sum, item) => sum + (item.expenses || 0), 0);
-      outstandingReceivables = data.reduce((sum, item) => sum + (item.pending_amount || 0), 0);
-    } else if (reportType === 'payment') {
-      totalRevenue = data.reduce((sum, item) => sum + (item.amount || 0), 0);
-      totalExpenses = 0;
-      outstandingReceivables = data.reduce((sum, item) => sum + (item.pending_amount || 0), 0);
-    }
-
-    const netProfit = totalRevenue - totalExpenses;
-
-    setStats({
-      totalRevenue,
-      totalExpenses,
-      netProfit,
-      outstandingReceivables
-    });
-  };
-
-  const applyFilters = () => {
-    let filtered = [];
-
-    if (activeReport === 'trip') {
-      filtered = tripData.filter(item => {
-        const matchesDate = dateRange.start && dateRange.end
-          ? new Date(item.created_at) >= new Date(dateRange.start) &&
-            new Date(item.created_at) <= new Date(dateRange.end)
-          : true;
-        const matchesDriver = selectedDriver
-          ? item.driver_id === selectedDriver
-          : true;
-        const matchesTruck = selectedTruck
-          ? item.truck_id === selectedTruck
-          : true;
-        const matchesStatus = selectedStatus
-          ? item.status === selectedStatus
-          : true;
-        const matchesSearch = searchQuery
-          ? item.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.driver?.toLowerCase().includes(searchQuery.toLowerCase())
-          : true;
-
-        return matchesDate && matchesDriver && matchesTruck && matchesStatus && matchesSearch;
-      });
-      setFilteredTripData(filtered);
-    } else if (activeReport === 'expense') {
-      filtered = expenseData.filter(item => {
-        const matchesDate = dateRange.start && dateRange.end
-          ? new Date(item.expense_date) >= new Date(dateRange.start) &&
-            new Date(item.expense_date) <= new Date(dateRange.end)
-          : true;
-        const matchesDriver = selectedDriver
-          ? item.driver_id === selectedDriver
-          : true;
-        const matchesTruck = selectedTruck
-          ? item.truck_id === selectedTruck
-          : true;
-        const matchesStatus = selectedStatus
-          ? item.status === selectedStatus
-          : true;
-        const matchesSearch = searchQuery
-          ? item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.vendor?.toLowerCase().includes(searchQuery.toLowerCase())
-          : true;
-
-        return matchesDate && matchesDriver && matchesTruck && matchesStatus && matchesSearch;
-      });
-      setFilteredExpenseData(filtered);
-    } else if (activeReport === 'settlement') {
-      filtered = settlementData.filter(item => {
-        const matchesDate = dateRange.start && dateRange.end
-          ? new Date(item.created_at) >= new Date(dateRange.start) &&
-            new Date(item.created_at) <= new Date(dateRange.end)
-          : true;
-        const matchesDriver = selectedDriver
-          ? item.driver_id === selectedDriver
-          : true;
-        const matchesTruck = selectedTruck
-          ? item.truck_id === selectedTruck
-          : true;
-        const matchesStatus = selectedStatus
-          ? item.payment_status === selectedStatus
-          : true;
-        const matchesSearch = searchQuery
-          ? item.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.driver?.toLowerCase().includes(searchQuery.toLowerCase())
-          : true;
-
-        return matchesDate && matchesDriver && matchesTruck && matchesStatus && matchesSearch;
-      });
-      setFilteredSettlementData(filtered);
-    } else if (activeReport === 'payment') {
-      filtered = paymentData.filter(item => {
-        const matchesDate = dateRange.start && dateRange.end
-          ? new Date(item.created_at) >= new Date(dateRange.start) &&
-            new Date(item.created_at) <= new Date(dateRange.end)
-          : true;
-        const matchesDriver = selectedDriver
-          ? item.driver_id === selectedDriver
-          : true;
-        const matchesTruck = selectedTruck
-          ? item.truck_id === selectedTruck
-          : true;
-        const matchesStatus = selectedStatus
-          ? item.payment_status === selectedStatus
-          : true;
-        const matchesSearch = searchQuery
-          ? item.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.vendor?.toLowerCase().includes(searchQuery.toLowerCase())
-          : true;
-
-        return matchesDate && matchesDriver && matchesTruck && matchesStatus && matchesSearch;
-      });
-      setFilteredPaymentData(filtered);
-    }
-  };
-
-  const getCurrentData = () => {
-    switch (activeReport) {
-      case 'trip': return filteredTripData;
-      case 'expense': return filteredExpenseData;
-      case 'settlement': return filteredSettlementData;
-      case 'payment': return filteredPaymentData;
-      default: return [];
-    }
-  };
-
-  const exportToCSV = () => {
-    const data = getCurrentData();
-    if (data.length === 0) return;
-
-    const headers = Object.keys(data[0]).filter(key => !key.startsWith('_'));
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => {
-        const value = row[header];
-        return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
-      }).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${activeReport}_report_${new Date().toISOString().split('T')[0]}.csv`);
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const getStatusOptions = () => {
-    switch (activeReport) {
-      case 'trip': return ['pending', 'in_transit', 'delivered', 'cancelled'];
-      case 'expense': return ['paid', 'pending', 'cancelled'];
-      case 'settlement': return ['pending', 'partial', 'paid'];
-      case 'payment': return ['pending', 'partial', 'paid'];
-      default: return [];
-    }
-  };
-
-  const getTableColumns = () => {
-    switch (activeReport) {
-      case 'trip':
-        return [
-          { key: 'customer', label: 'Customer' },
-          { key: 'driver', label: 'Driver' },
-          { key: 'freight_amount', label: 'Freight Amount' },
-          { key: 'status', label: 'Status' },
-          { key: 'created_at', label: 'Created Date' },
-        ];
-      case 'expense':
-        return [
-          { key: 'description', label: 'Description' },
-          { key: 'vendor', label: 'Vendor' },
-          { key: 'amount', label: 'Amount' },
-          { key: 'status', label: 'Status' },
-          { key: 'expense_date', label: 'Expense Date' },
-        ];
-      case 'settlement':
-        return [
-          { key: 'customer', label: 'Customer' },
-          { key: 'driver', label: 'Driver' },
-          { key: 'earnings', label: 'Earnings' },
-          { key: 'pending_amount', label: 'Pending Amount' },
-          { key: 'payment_status', label: 'Payment Status' },
-          { key: 'created_at', label: 'Created Date' },
-        ];
-      case 'payment':
-        return [
-          { key: 'customer', label: 'Customer' },
-          { key: 'amount', label: 'Amount' },
-          { key: 'payment_status', label: 'Payment Status' },
-          { key: 'pending_amount', label: 'Pending Amount' },
-          { key: 'created_at', label: 'Created Date' },
-        ];
-      default: return [];
     }
   };
 
@@ -422,75 +117,67 @@ export default function ReportsPage({ user, onLogout }) {
   return (
     <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
-
-        {/* ── HEADER ── */}
+        {/* Header */}
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
             <h1 style={s.headerTitle}>Reports</h1>
           </div>
-
-          <button onClick={exportToCSV} style={s.exportBtn} disabled={getCurrentData().length === 0}>
-            <i className="ti ti-download" style={{ fontSize: 16 }} /> Export CSV
-          </button>
         </div>
 
-        {/* ── REPORT SELECTOR ── */}
-        <div style={s.reportSelector}>
-          {reports.map((report) => (
-            <button
-              key={report.id}
-              onClick={() => setActiveReport(report.id)}
-              style={{ ...s.reportBtn, ...(activeReport === report.id ? s.reportBtnActive : {}) }}
-            >
-              {report.label}
-            </button>
+        {/* Reports Grid */}
+        <div style={s.reportsGrid}>
+          {reports.map((report, index) => (
+            <div key={index} style={s.reportCard}>
+              <div style={{ ...s.reportIconContainer, backgroundColor: `${report.color}15`, borderColor: `${report.color}25` }}>
+                <i className={report.icon} style={{ fontSize: 32, color: report.color }} />
+              </div>
+              <div style={s.reportContent}>
+                <h3 style={s.reportTitle}>{report.title}</h3>
+                <div style={s.reportValue}>${report.total.toLocaleString()}</div>
+                <div style={s.reportCount}>{report.count} items</div>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* ── FILTERS ── */}
-        <ReportFilters
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          selectedDriver={selectedDriver}
-          setSelectedDriver={setSelectedDriver}
-          selectedTruck={selectedTruck}
-          setSelectedTruck={setSelectedTruck}
-          selectedStatus={selectedStatus}
-          setSelectedStatus={setSelectedStatus}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          drivers={drivers}
-          trucks={trucks}
-          statusOptions={getStatusOptions()}
-        />
+        {/* Financial Summary */}
+        <div style={s.financialSummary}>
+          <h2 style={s.sectionTitle}>Financial Summary</h2>
+          <div style={s.financialGrid}>
+            <div style={s.financialCard}>
+              <div style={s.financialHeader}>
+                <i className="ti ti-arrow-up" style={{ fontSize: 24, color: '#22C55E' }} />
+                <h3 style={s.financialTitle}>Total Revenue</h3>
+              </div>
+              <div style={s.financialValue}>
+                ${reports.find(r => r.title === 'Trip Summary')?.total?.toLocaleString() || 0}
+              </div>
+            </div>
 
-        {/* ── STATS CARDS ── */}
-        <ReportStats stats={stats} />
+            <div style={s.financialCard}>
+              <div style={s.financialHeader}>
+                <i className="ti ti-arrow-down" style={{ fontSize: 24, color: '#EF4444' }} />
+                <h3 style={s.financialTitle}>Total Expenses</h3>
+              </div>
+              <div style={s.financialValue}>
+                ${reports.find(r => r.title === 'Total Expenses')?.total?.toLocaleString() || 0}
+              </div>
+            </div>
 
-        {/* ── TABLE ── */}
-        <ReportTable
-          data={getCurrentData()}
-          columns={getTableColumns()}
-          loading={loading}
-        />
+            <div style={s.financialCard}>
+              <div style={s.financialHeader}>
+                <i className="ti ti-wallet" style={{ fontSize: 24, color: '#3B82F6' }} />
+                <h3 style={s.financialTitle}>Net Profit</h3>
+              </div>
+              <div style={s.financialValue}>
+                ${(reports.find(r => r.title === 'Trip Summary')?.total || 0 - reports.find(r => r.title === 'Total Expenses')?.total || 0).toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
-  );
-}
-
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-      @keyframes spin { to { transform: rotate(360deg); } }
-      input::placeholder { color: rgba(20,20,30,0.3); }
-      input:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      select:focus { outline: none; border-color: rgba(124,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(124,99,255,0.1); }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
   );
 }
 
@@ -502,8 +189,7 @@ const s = {
     color: '#1A1A1F',
   },
   center: {
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     minHeight: '100vh', gap: 16,
   },
   spinnerRing: {
@@ -521,18 +207,15 @@ const s = {
     fontFamily: "'Space Grotesk', sans-serif",
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
-
   shell: {
     maxWidth: 1200,
     margin: '0 auto',
     padding: 28,
     boxSizing: 'border-box',
   },
-
-  /* ── HEADER ── */
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 24, flexWrap: 'wrap', gap: 16,
+    marginBottom: 32,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -541,32 +224,80 @@ const s = {
   },
   headerTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: -0.5,
+    fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5,
   },
-  exportBtn: {
-    display: 'flex', alignItems: 'center', gap: 8,
-    background: '#7C63FF', color: '#fff', border: 'none',
-    padding: '11px 20px', borderRadius: 12,
-    cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-    boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
+  reportsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: 20,
+    marginBottom: 32,
   },
-
-  /* ── REPORT SELECTOR ── */
-  reportSelector: {
-    display: 'flex', gap: 12, marginBottom: 24,
-    flexWrap: 'wrap',
-  },
-  reportBtn: {
-    padding: '11px 22px', borderRadius: 12,
+  reportCard: {
+    background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    background: '#fff', color: 'rgba(20,20,30,0.6)',
-    cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-    transition: 'all 0.15s',
+    borderRadius: 18,
+    padding: 24,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 20,
+    transition: 'all 0.2s',
+    ':hover': {
+      boxShadow: '0 4px 16px rgba(20,20,30,0.1)',
+      transform: 'translateY(-2px)',
+    },
   },
-  reportBtnActive: {
-    background: '#7C63FF', color: '#fff', border: 'none',
-    boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
+  reportIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    border: '1px solid',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportContent: {
+    flex: 1,
+  },
+  reportTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: '0 0 8px',
+  },
+  reportValue: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 24, fontWeight: 700, color: '#1A1A1F', margin: '0 0 4px',
+  },
+  reportCount: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: 13, color: 'rgba(20,20,30,0.45)',
+  },
+  financialSummary: {
+    marginTop: 32,
+  },
+  sectionTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 20, fontWeight: 600, color: '#1A1A1F', marginBottom: 20,
+  },
+  financialGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: 20,
+  },
+  financialCard: {
+    background: '#fff',
+    border: '1px solid rgba(20,20,30,0.07)',
+    borderRadius: 18,
+    padding: 24,
+  },
+  financialHeader: {
+    display: 'flex', alignItems: 'center', gap: 12,
+    marginBottom: 16,
+  },
+  financialTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: 0,
+  },
+  financialValue: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 28, fontWeight: 700, color: '#1A1A1F',
   },
 };

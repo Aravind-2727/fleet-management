@@ -7,28 +7,65 @@ import DashboardLayout from '../../components/dashboard/layout';
 export default function DriversPage({ user, onLogout }) {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [payType, setPayType] = useState('per_trip');
-  const [status, setStatus] = useState('Active');
+
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    payType: 'per_trip',
+    status: 'Active',
+  });
 
   useEffect(() => {
     fetchDrivers();
   }, []);
 
+  const fetchDrivers = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setDrivers([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('drivers')
+        .select(`
+          id,
+          name:profiles(name),
+          phone:profiles(phone),
+          email:profiles(email),
+          pay_type,
+          status,
+          salary_amount
+        `)
+        .eq('owner_id', authUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching drivers:', error);
+      } else {
+        setDrivers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateForm = () => {
-    if (!name || name.trim().length < 2) {
+    if (!formData.name || formData.name.trim().length < 2) {
       alert('Enter valid driver name (at least 2 characters)');
       return false;
     }
-    if (phone && !/^[\d\s\-\+\(\)]+$/.test(phone)) {
+    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
       alert('Enter valid phone number');
       return false;
     }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       alert('Enter valid email address');
       return false;
     }
@@ -38,110 +75,114 @@ export default function DriversPage({ user, onLogout }) {
   const saveDriver = async () => {
     if (!validateForm()) return;
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      alert('Not authenticated. Please login again.');
-      return;
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        alert('Not authenticated. Please login again.');
+        return;
+      }
+
+      // Create driver directly (new API route architecture)
+      const { error } = await supabase
+        .from('drivers')
+        .insert([
+          {
+            owner_id: authUser.id,
+            name: formData.name.trim(),
+            phone: formData.phone.trim(),
+            email: formData.email.trim(),
+            pay_type: formData.payType,
+            salary_amount: formData.payType === 'monthly_salary' ? 0 : null,
+            status: formData.status,
+          },
+        ]);
+
+      if (error) {
+        console.error('Error creating driver:', error);
+        alert(error.message);
+        return;
+      }
+
+      // Reset form
+      setFormData({
+        name: '',
+        phone: '',
+        email: '',
+        payType: 'per_trip',
+        status: 'Active',
+      });
+      setShowForm(false);
+
+      // Refresh data
+      fetchDrivers();
+
+      alert('Driver added successfully');
+    } catch (error) {
+      console.error('Error creating driver:', error);
+      alert('Failed to create driver. Please try again.');
     }
-
-   const { error } = await supabase
-  .from('drivers')
-  .insert([{
-    owner_id: authUser.id,
-    name: name.trim(),
-    phone: phone.trim(),
-    email: email.trim(),
-    pay_type: payType,
-    status: status,
-  }]);
-
-if (error) {
-  console.error(error);
-  alert(error.message);
-  return;
-}
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      return;
-    }
-
-    setName('');
-    setPhone('');
-    setEmail('');
-    setPayType('per_trip');
-    setStatus('Active');
-    setShowForm(false);
-
-    fetchDrivers();
-    alert('Driver added successfully');
   };
 
   const deleteDriver = async (id) => {
     if (!confirm('Are you sure you want to delete this driver?')) return;
 
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      alert('Not authenticated. Please login again.');
-      return;
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        alert('Not authenticated. Please login again.');
+        return;
+      }
+
+      // Verify ownership before delete
+      const { data: driver, error: fetchError } = await supabase
+        .from('drivers')
+        .select('owner_id, profile_id')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (fetchError || !driver) {
+        alert('Driver not found');
+        return;
+      }
+
+      if (driver.owner_id !== authUser.id) {
+        alert('Unauthorized to delete this driver');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('drivers')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      // Optionally delete the profile too
+      if (driver.profile_id) {
+        await supabase.from('profiles').delete().eq('id', driver.profile_id);
+      }
+
+      fetchDrivers();
+      alert('Driver deleted successfully');
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+      alert('Failed to delete driver. Please try again.');
     }
-
-    const { data: driver, error: fetchError } = await supabase
-      .from('drivers')
-      .select('owner_id, profile_id')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (fetchError || !driver) {
-      alert('Driver not found');
-      return;
-    }
-
-    if (driver.owner_id !== authUser.id) {
-      alert('Unauthorized to delete this driver');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('drivers')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    // Optionally delete the profile too
-    if (driver.profile_id) {
-      await supabase.from('profiles').delete().eq('id', driver.profile_id);
-    }
-
-    fetchDrivers();
   };
 
-  const fetchDrivers = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      setDrivers([]);
-      setLoading(false);
-      return;
-    }
+  const getPayTypeBadge = (payType) => {
+    return payType === 'per_trip' ? 
+      { text: 'Per Trip', color: '#7C63FF', bg: '#7C63FF15' } :
+      { text: 'Monthly Salary', color: '#EC4899', bg: '#EC489915' };
+  };
 
-    const { data, error } = await supabase
-      .from('drivers')
-      .select('id, profile_id, pay_type, status, profiles(name, phone, email)')
-      .eq('owner_id', authUser.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(error);
-    } else {
-      setDrivers(data || []);
-    }
-
-    setLoading(false);
+  const getStatusBadge = (status) => {
+    return status === 'Active' ?
+      { text: 'Active', color: '#16A34A', bg: '#16A34A15' } :
+      { text: 'Inactive', color: '#6B7280', bg: '#6B728015' };
   };
 
   if (loading) {
@@ -158,8 +199,7 @@ if (error) {
   return (
     <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
-
-        {/* ── HEADER ── */}
+        {/* Header */}
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
@@ -171,64 +211,66 @@ if (error) {
           </button>
         </div>
 
-        {/* ── ADD FORM ── */}
+        {/* Add Form */}
         {showForm && (
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add New Driver</h3>
 
-            <div style={s.field}>
-              <label style={s.label}>Driver Name</label>
-              <input
-                placeholder="e.g. John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={s.input}
-              />
-            </div>
+            <div style={s.formGrid}>
+              <div style={s.formField}>
+                <label style={s.label}>Driver Name</label>
+                <input
+                  placeholder="e.g. John Doe"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  style={s.input}
+                />
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Phone</label>
-              <input
-                placeholder="e.g. +1 555-123-4567"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                style={s.input}
-              />
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Phone</label>
+                <input
+                  placeholder="e.g. +1 555-123-4567"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  style={s.input}
+                />
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Email</label>
-              <input
-                placeholder="e.g. john@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={s.input}
-              />
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Email</label>
+                <input
+                  placeholder="e.g. john@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  style={s.input}
+                />
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Pay Type</label>
-              <select
-                value={payType}
-                onChange={(e) => setPayType(e.target.value)}
-                style={s.input}
-              >
-                <option value="per_trip">Per Trip</option>
-                <option value="monthly_salary">Monthly Salary</option>
-              </select>
-            </div>
+              <div style={s.formField}>
+                <label style={s.label}>Pay Type</label>
+                <select
+                  value={formData.payType}
+                  onChange={(e) => setFormData({...formData, payType: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="per_trip">Per Trip</option>
+                  <option value="monthly_salary">Monthly Salary</option>
+                </select>
+              </div>
 
-            <div style={s.field}>
-              <label style={s.label}>Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                style={s.input}
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              <div style={s.formField}>
+                <label style={s.label}>Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
             </div>
 
             <div style={s.formActions}>
@@ -238,7 +280,7 @@ if (error) {
           </div>
         )}
 
-        {/* ── TABLE ── */}
+        {/* Table */}
         {drivers.length === 0 ? (
           <div style={s.empty}>No drivers found</div>
         ) : (
@@ -257,14 +299,18 @@ if (error) {
               <tbody>
                 {drivers.map((driver) => (
                   <tr key={driver.id} style={s.tr}>
-                    <td style={s.td}>{driver.profiles?.name || 'Unknown'}</td>
-                    <td style={s.td}>{driver.profiles?.phone || '—'}</td>
-                    <td style={s.td}>{driver.profiles?.email || '—'}</td>
+                    <td style={s.td}>{driver.name?.name || 'Unknown'}</td>
+                    <td style={s.td}>{driver.phone?.phone || '—'}</td>
+                    <td style={s.td}>{driver.email?.email || '—'}</td>
                     <td style={s.td}>
-                      <span style={driver.pay_type === 'per_trip' ? s.badgePerTrip : s.badgeMonthly}>{driver.pay_type}</span>
+                      <span style={{ ...s.badge, backgroundColor: getPayTypeBadge(driver.pay_type).bg, color: getPayTypeBadge(driver.pay_type).color }}>
+                        {getPayTypeBadge(driver.pay_type).text}
+                      </span>
                     </td>
                     <td style={s.td}>
-                      <span style={driver.status === 'Active' ? s.statusBadgeActive : s.statusBadgeInactive}>{driver.status}</span>
+                      <span style={{ ...s.statusBadge, backgroundColor: getStatusBadge(driver.status).bg, color: getStatusBadge(driver.status).color }}>
+                        {getStatusBadge(driver.status).text}
+                      </span>
                     </td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
                       <button onClick={() => deleteDriver(driver.id)} style={s.deleteBtn}>
@@ -290,8 +336,7 @@ const s = {
     color: '#1A1A1F',
   },
   center: {
-    display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     minHeight: '100vh', gap: 16,
   },
   spinnerRing: {
@@ -351,7 +396,15 @@ const s = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: 16, fontWeight: 600, margin: '0 0 18px',
   },
-  field: { marginBottom: 14 },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: 16,
+    marginBottom: 20,
+  },
+  formField: {
+    marginBottom: 14,
+  },
   label: {
     display: 'block',
     fontFamily: "'Space Grotesk', sans-serif",
@@ -420,40 +473,20 @@ const s = {
     fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
   },
-  statusBadgeActive: {
+  badge: {
     display: 'inline-block',
-    background: 'rgba(34,197,94,0.1)',
-    border: '1px solid rgba(34,197,94,0.25)',
-    color: '#16A34A',
-    borderRadius: 20, padding: '4px 12px',
-    fontSize: 12, fontWeight: 600,
+    padding: '4px 12px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
   },
-  statusBadgeInactive: {
+  statusBadge: {
     display: 'inline-block',
-    background: 'rgba(107,114,128,0.1)',
-    border: '1px solid rgba(107,114,128,0.25)',
-    color: '#6B7280',
-    borderRadius: 20, padding: '4px 12px',
-    fontSize: 12, fontWeight: 600,
-    fontFamily: "'Space Grotesk', sans-serif",
-  },
-  badgePerTrip: {
-    display: 'inline-block',
-    background: 'rgba(124,99,255,0.1)',
-    border: '1px solid rgba(124,99,255,0.25)',
-    color: '#7C63FF',
-    borderRadius: 20, padding: '4px 12px',
-    fontSize: 12, fontWeight: 600,
-    fontFamily: "'Space Grotesk', sans-serif",
-  },
-  badgeMonthly: {
-    display: 'inline-block',
-    background: 'rgba(236,72,153,0.1)',
-    border: '1px solid rgba(236,72,153,0.25)',
-    color: '#EC4899',
-    borderRadius: 20, padding: '4px 12px',
-    fontSize: 12, fontWeight: 600,
+    padding: '4px 12px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
   },
   deleteBtn: {

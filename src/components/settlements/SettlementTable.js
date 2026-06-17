@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
+
 function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettlement, drivers, trips }) {
   const getStatusColor = (status) => {
     switch (status) {
@@ -42,12 +49,12 @@ function SettlementTableInner({ settlements, updateSettlementStatus, deleteSettl
             <tr key={settlement.id} style={s.tr}>
               <td style={s.td}>{drivers[settlement.driver_id] || 'Unknown'}</td>
               <td style={s.td}>{trips[settlement.trip_id] || 'Unknown'}</td>
-              <td style={s.td}>${(settlement.earnings || 0).toLocaleString()}</td>
-              <td style={s.td}>${(settlement.reimbursable_expenses || 0).toLocaleString()}</td>
-              <td style={s.td}>${(settlement.advances_deducted || 0).toLocaleString()}</td>
+              <td style={s.td}>{formatCurrency(settlement.earnings || 0)}</td>
+              <td style={s.td}>{formatCurrency(settlement.reimbursable_expenses || 0)}</td>
+              <td style={s.td}>{formatCurrency(settlement.advances_deducted || 0)}</td>
               <td style={s.td}>
                 <span style={{ fontWeight: 600, color: (settlement.net_payable || 0) >= 0 ? '#22C55E' : '#E0524A' }}>
-                  ${Math.abs(settlement.net_payable || 0).toLocaleString()}
+                  {formatCurrency(Math.abs(settlement.net_payable || 0))}
                 </span>
               </td>
               <td style={s.td}>{settlement.payment_mode}</td>
