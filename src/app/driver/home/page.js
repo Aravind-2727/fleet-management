@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { formatCurrency } from '../lib/currency';
+import { FormatCurrency } from '../../lib/currency';
 import { useAuth } from '../../lib/AuthContext';
 import { useRouter } from 'next/navigation';
 
