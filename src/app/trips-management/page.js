@@ -442,7 +442,7 @@ export default function TripsManagementPage({ user, onLogout }) {
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
-            <h1 style={s.headerTitle}>Trips Management</h1>
+            <h1 style={s.headerTitle}>Trucks Management</h1>
           </div>
 
           <button onClick={() => setShowForm(true)} style={s.primaryBtn}>

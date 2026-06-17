@@ -2,14 +2,14 @@
 
 import { useAuth } from '../../app/lib/AuthContext';
 import { canAccessModule } from '../../app/lib/roleGuard';
-
+import Link from 'next/link';
 export default function ProtectedSidebar({ user, onLogout, ...props }) {
   const { userRole, loading, logout } = useAuth();
 
    const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: 'ti ti-layout-dashboard' },
     { id: 'trips', label: 'Trips', path: '/trips', icon: 'ti ti-truck' },
-    { id: 'trips-management', label: 'Trips Management', path: '/trips-management', icon: 'ti ti-route' },
+    { id: 'trips-management', label: 'Trucks', path: '/trips-management', icon: 'ti ti-route' },
     { id: 'drivers', label: 'Drivers', path: '/drivers', icon: 'ti ti-users' },
     { id: 'expenses', label: 'Expenses', path: '/expenses', icon: 'ti ti-receipt' },
     { id: 'advances', label: 'Advances', path: '/advances', icon: 'ti ti-wallet' },
@@ -40,7 +40,7 @@ export default function ProtectedSidebar({ user, onLogout, ...props }) {
       <nav style={s.nav}>
         {sidebarItems.map((item) => {
           return (
-<a
+<Link
   key={item.id}
   href={item.path}
   style={{
@@ -48,9 +48,9 @@ export default function ProtectedSidebar({ user, onLogout, ...props }) {
     ...(props.currentPath === item.path ? s.navItemActive : {})
   }}
 >
-              <i className={item.icon} style={s.navIcon} />
-              <span>{item.label}</span>
-            </a>
+  <i className={item.icon} style={s.navIcon} />
+  <span>{item.label}</span>
+</Link>
           );
         })}
       </nav>
