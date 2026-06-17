@@ -34,9 +34,9 @@ export default function DriversPage({ user, onLogout }) {
         .from('drivers')
         .select(`
           id,
-          name:profiles(name),
-          phone:profiles(phone),
-          email:profiles(email),
+          name,
+          phone,
+          email,
           pay_type,
           status,
           salary_amount
@@ -47,6 +47,7 @@ export default function DriversPage({ user, onLogout }) {
       if (error) {
         console.error('Error fetching drivers:', error);
       } else {
+        console.log('Drivers API Response:', data);
         setDrivers(data || []);
       }
     } catch (error) {
@@ -299,9 +300,9 @@ export default function DriversPage({ user, onLogout }) {
               <tbody>
                 {drivers.map((driver) => (
                   <tr key={driver.id} style={s.tr}>
-                    <td style={s.td}>{driver.name?.name || 'Unknown'}</td>
-                    <td style={s.td}>{driver.phone?.phone || '—'}</td>
-                    <td style={s.td}>{driver.email?.email || '—'}</td>
+                    <td style={s.td}>{driver.name || 'Unknown'}</td>
+                    <td style={s.td}>{driver.phone || '—'}</td>
+                    <td style={s.td}>{driver.email || '—'}</td>
                     <td style={s.td}>
                       <span style={{ ...s.badge, backgroundColor: getPayTypeBadge(driver.pay_type).bg, color: getPayTypeBadge(driver.pay_type).color }}>
                         {getPayTypeBadge(driver.pay_type).text}
