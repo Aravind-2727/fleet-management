@@ -49,40 +49,42 @@ export default function SettingsPage({ user, onLogout }) {
     }
   };
 
-  const saveProfile = async () => {
-    if (!profileForm.name || profileForm.name.trim().length < 2) {
-      alert('Enter valid name (at least 2 characters)');
+ const saveProfile = async () => {
+  if (!profileForm.name || profileForm.name.trim().length < 2) {
+    alert('Enter valid name (at least 2 characters)');
+    return;
+  }
+
+  try {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) { alert('Not authenticated'); return; }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', authUser.id);  // ← use authUser.id directly
+
+    if (error) {
+      alert(error.message);
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: profileForm.name.trim(),
-          phone: profileForm.phone.trim(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id);
-
-      if (error) {
-        console.error('Error updating profile:', error);
-        alert(error.message);
-        return;
-      }
-
-      setProfile({
-        ...profile,
-        name: profileForm.name.trim(),
-        phone: profileForm.phone.trim(),
-      });
-      setShowProfileForm(false);
-      alert('Profile updated successfully');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
-    }
-  };
+    setProfile({
+      ...profile,
+      name: profileForm.name.trim(),
+      phone: profileForm.phone.trim(),
+    });
+    setShowProfileForm(false);
+    alert('Profile updated successfully');
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    alert('Failed to update profile. Please try again.');
+  }
+};
 
   if (loading) {
     return (

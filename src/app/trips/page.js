@@ -35,39 +35,22 @@ export default function TripsPage({ user, onLogout }) {
   const fetchTrips = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setTrips([]);
-        setLoading(false);
-        return;
-      }
+      if (!authUser) { setTrips([]); setLoading(false); return; }
 
       const { data, error } = await supabase
         .from('trips')
         .select(`
-          id,
-          driver_id,
-          truck_id,
-          origin,
-          destination,
-          customer,
-          freight_amount,
-          received_amount,
-          status,
-          close_status,
-          expected_start_date,
-          expected_end_date,
-          created_at,
-          drivers(id, profiles(name)),
+          id, driver_id, truck_id, origin, destination, customer,
+          freight_amount, received_amount, status, close_status,
+          expected_start_date, expected_end_date, created_at,
+          drivers(id, name),
           trucks(truck_number, status)
         `)
         .eq('owner_id', authUser.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching trips:', error);
-      } else {
-        setTrips(data || []);
-      }
+      if (error) console.error('Error fetching trips:', error);
+      else setTrips(data || []);
     } catch (error) {
       console.error('Error fetching trips:', error);
     } finally {
@@ -78,29 +61,16 @@ export default function TripsPage({ user, onLogout }) {
   const fetchDrivers = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setDrivers([]);
-        return;
-      }
+      if (!authUser) { setDrivers([]); return; }
 
       const { data, error } = await supabase
         .from('drivers')
-        .select(`
-          id,
-          name:profiles(name),
-          phone:profiles(phone),
-          email:profiles(email),
-          pay_type,
-          status
-        `)
+        .select('id, name, phone, email, pay_type, status')
         .eq('owner_id', authUser.id)
         .eq('status', 'Active');
 
-      if (error) {
-        console.error('Error fetching drivers:', error);
-      } else {
-        setDrivers(data || []);
-      }
+      if (error) console.error('Error fetching drivers:', error);
+      else setDrivers(data || []);
     } catch (error) {
       console.error('Error fetching drivers:', error);
     }
@@ -109,10 +79,7 @@ export default function TripsPage({ user, onLogout }) {
   const fetchTrucks = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setTrucks([]);
-        return;
-      }
+      if (!authUser) { setTrucks([]); return; }
 
       const { data, error } = await supabase
         .from('trucks')
@@ -120,40 +87,21 @@ export default function TripsPage({ user, onLogout }) {
         .eq('owner_id', authUser.id)
         .eq('status', 'Active');
 
-      if (error) {
-        console.error('Error fetching trucks:', error);
-      } else {
-        setTrucks(data || []);
-      }
+      if (error) console.error('Error fetching trucks:', error);
+      else setTrucks(data || []);
     } catch (error) {
       console.error('Error fetching trucks:', error);
     }
   };
 
   const validateForm = () => {
-    if (!formData.driver_id) {
-      alert('Please select a driver');
-      return false;
-    }
-    if (!formData.truck_id) {
-      alert('Please select a truck');
-      return false;
-    }
-    if (!formData.origin) {
-      alert('Please enter origin');
-      return false;
-    }
-    if (!formData.destination) {
-      alert('Please enter destination');
-      return false;
-    }
-    if (!formData.customer) {
-      alert('Please enter customer name');
-      return false;
-    }
+    if (!formData.driver_id) { alert('Please select a driver'); return false; }
+    if (!formData.truck_id) { alert('Please select a truck'); return false; }
+    if (!formData.origin) { alert('Please enter origin'); return false; }
+    if (!formData.destination) { alert('Please enter destination'); return false; }
+    if (!formData.customer) { alert('Please enter customer name'); return false; }
     if (!formData.freight_amount || isNaN(formData.freight_amount) || parseFloat(formData.freight_amount) <= 0) {
-      alert('Please enter a valid freight amount');
-      return false;
+      alert('Please enter a valid freight amount'); return false;
     }
     return true;
   };
@@ -163,56 +111,36 @@ export default function TripsPage({ user, onLogout }) {
 
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        alert('Not authenticated. Please login again.');
-        return;
-      }
+      if (!authUser) { alert('Not authenticated. Please login again.'); return; }
 
-      const { error } = await supabase
-        .from('trips')
-        .insert([
-          {
-            owner_id: authUser.id,
-            driver_id: formData.driver_id,
-            truck_id: formData.truck_id,
-            origin: formData.origin,
-            destination: formData.destination,
-            customer: formData.customer,
-            customer_phone: formData.customer_phone,
-            customer_email: formData.customer_email,
-            freight_amount: parseFloat(formData.freight_amount),
-            received_amount: 0,
-            status: 'assigned',
-            expected_start_date: formData.start_date || null,
-            expected_end_date: formData.end_date || null,
-            notes: formData.notes,
-          },
-        ]);
+      const { error } = await supabase.from('trips').insert([{
+        owner_id: authUser.id,
+        driver_id: formData.driver_id,
+        truck_id: formData.truck_id,
+        origin: formData.origin,
+        destination: formData.destination,
+        customer: formData.customer,
+        customer_phone: formData.customer_phone,
+        customer_email: formData.customer_email,
+        freight_amount: parseFloat(formData.freight_amount),
+        received_amount: 0,
+        status: 'assigned',
+        expected_start_date: formData.start_date || null,
+        expected_end_date: formData.end_date || null,
+        notes: formData.notes,
+      }]);
 
-      if (error) {
-        console.error('Error creating trip:', error);
-        alert(error.message);
-        return;
-      }
+      if (error) { alert(error.message); return; }
 
       setFormData({
-        driver_id: '',
-        truck_id: '',
-        origin: '',
-        destination: '',
-        customer: '',
-        customer_phone: '',
-        customer_email: '',
-        freight_amount: '',
-        start_date: '',
-        end_date: '',
-        notes: '',
+        driver_id: '', truck_id: '', origin: '', destination: '',
+        customer: '', customer_phone: '', customer_email: '',
+        freight_amount: '', start_date: '', end_date: '', notes: '',
       });
       setShowForm(false);
       fetchTrips();
       alert('Trip created successfully');
     } catch (error) {
-      console.error('Error creating trip:', error);
       alert('Failed to create trip. Please try again.');
     }
   };
@@ -224,41 +152,29 @@ export default function TripsPage({ user, onLogout }) {
         .update({ status: newStatus })
         .eq('id', tripId);
 
-      if (error) {
-        console.error('Error updating trip status:', error);
-        alert(error.message);
-        return;
-      }
+      if (error) { alert(error.message); return; }
 
       fetchTrips();
       alert(`Trip status updated to ${newStatus}`);
     } catch (error) {
-      console.error('Error updating trip status:', error);
       alert('Failed to update trip status. Please try again.');
     }
   };
 
   const closeTrip = async (tripId) => {
-    if (!confirm('Are you sure you want to close this trip? This will initiate the settlement process.')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to close this trip? This will initiate the settlement process.')) return;
 
     try {
       const { error } = await supabase
         .from('trips')
-        .update({ close_status: true })
+        .update({ close_status: true, status: 'pending_settlement' })
         .eq('id', tripId);
 
-      if (error) {
-        console.error('Error closing trip:', error);
-        alert(error.message);
-        return;
-      }
+      if (error) { alert(error.message); return; }
 
       fetchTrips();
       alert('Trip closed successfully. You can now create a settlement.');
     } catch (error) {
-      console.error('Error closing trip:', error);
       alert('Failed to close trip. Please try again.');
     }
   };
@@ -289,13 +205,13 @@ export default function TripsPage({ user, onLogout }) {
   return (
     <DashboardLayout user={user} onLogout={onLogout}>
       <div style={s.shell}>
+
         {/* Header */}
         <div style={s.header}>
           <div>
             <p style={s.headerSub}>Fleet</p>
             <h1 style={s.headerTitle}>Trips Management</h1>
           </div>
-
           <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Create Trip
           </button>
@@ -312,13 +228,13 @@ export default function TripsPage({ user, onLogout }) {
                 <label style={s.label}>Driver</label>
                 <select
                   value={formData.driver_id}
-                  onChange={(e) => setFormData({...formData, driver_id: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, driver_id: e.target.value })}
                   style={s.input}
                 >
                   <option value="">Select Driver</option>
                   {drivers.map(driver => (
                     <option key={driver.id} value={driver.id}>
-                      {driver.name?.name || 'Unknown'}
+                      {driver.name || 'Unknown'}
                     </option>
                   ))}
                 </select>
@@ -328,7 +244,7 @@ export default function TripsPage({ user, onLogout }) {
                 <label style={s.label}>Truck</label>
                 <select
                   value={formData.truck_id}
-                  onChange={(e) => setFormData({...formData, truck_id: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, truck_id: e.target.value })}
                   style={s.input}
                 >
                   <option value="">Select Truck</option>
@@ -345,7 +261,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   placeholder="e.g. Mumbai"
                   value={formData.origin}
-                  onChange={(e) => setFormData({...formData, origin: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -355,7 +271,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   placeholder="e.g. Delhi"
                   value={formData.destination}
-                  onChange={(e) => setFormData({...formData, destination: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -365,7 +281,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   placeholder="e.g. ABC Logistics"
                   value={formData.customer}
-                  onChange={(e) => setFormData({...formData, customer: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -374,9 +290,9 @@ export default function TripsPage({ user, onLogout }) {
                 <label style={s.label}>Freight Amount (₹)</label>
                 <input
                   type="number"
-                  placeholder="e.g. 5000"
+                  placeholder="e.g. 50000"
                   value={formData.freight_amount}
-                  onChange={(e) => setFormData({...formData, freight_amount: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, freight_amount: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -386,7 +302,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   placeholder="e.g. +91 9876543210"
                   value={formData.customer_phone}
-                  onChange={(e) => setFormData({...formData, customer_phone: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -396,7 +312,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   placeholder="e.g. contact@abc.com"
                   value={formData.customer_email}
-                  onChange={(e) => setFormData({...formData, customer_email: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -406,7 +322,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   type="date"
                   value={formData.start_date}
-                  onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -416,7 +332,7 @@ export default function TripsPage({ user, onLogout }) {
                 <input
                   type="date"
                   value={formData.end_date}
-                  onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                   style={s.input}
                 />
               </div>
@@ -426,7 +342,7 @@ export default function TripsPage({ user, onLogout }) {
                 <textarea
                   placeholder="Optional notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   style={{ ...s.input, minHeight: 80, resize: 'vertical' }}
                 />
               </div>
@@ -464,12 +380,16 @@ export default function TripsPage({ user, onLogout }) {
                   <tr key={trip.id} style={s.tr}>
                     <td style={s.td}>{trip.origin} → {trip.destination}</td>
                     <td style={s.td}>{trip.customer}</td>
-                    <td style={s.td}>{trip.drivers?.profiles?.name || 'Unknown'}</td>
+                    <td style={s.td}>{trip.drivers?.name || 'Unknown'}</td>
                     <td style={s.td}>{trip.trucks?.truck_number || 'Unknown'}</td>
                     <td style={s.td}>{formatCurrency(trip.freight_amount || 0)}</td>
                     <td style={s.td}>
-                      <span style={{ ...s.statusBadge, backgroundColor: `${getStatusColor(trip.status)}15`, color: getStatusColor(trip.status) }}>
-                        {trip.status}
+                      <span style={{
+                        ...s.statusBadge,
+                        backgroundColor: `${getStatusColor(trip.status)}15`,
+                        color: getStatusColor(trip.status),
+                      }}>
+                        {trip.status?.replace('_', ' ')}
                       </span>
                     </td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
@@ -514,6 +434,16 @@ export default function TripsPage({ user, onLogout }) {
                             Close Trip
                           </button>
                         )}
+                        {trip.status === 'pending_settlement' && (
+                          <span style={{
+                            ...s.actionBtn,
+                            backgroundColor: '#F59E0B15',
+                            color: '#F59E0B',
+                            cursor: 'default',
+                          }}>
+                            Awaiting Settlement
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -554,10 +484,7 @@ const s = {
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
   shell: {
-    maxWidth: 1200,
-    margin: '0 auto',
-    padding: 28,
-    boxSizing: 'border-box',
+    maxWidth: 1200, margin: '0 auto', padding: 28, boxSizing: 'border-box',
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -581,11 +508,9 @@ const s = {
     boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
   },
   formCard: {
-    background: '#fff',
-    border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, padding: 24,
-    marginBottom: 20, position: 'relative', overflow: 'hidden',
-    boxSizing: 'border-box',
+    background: '#fff', border: '1px solid rgba(20,20,30,0.07)',
+    borderRadius: 18, padding: 24, marginBottom: 20,
+    position: 'relative', overflow: 'hidden', boxSizing: 'border-box',
   },
   shimmer: {
     position: 'absolute', top: 0, left: 0, right: 0, height: 1,
@@ -598,33 +523,21 @@ const s = {
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 16,
-    marginBottom: 20,
+    gap: 16, marginBottom: 20,
   },
-  formField: {
-    marginBottom: 14,
-  },
+  formField: { marginBottom: 14 },
   label: {
-    display: 'block',
-    fontFamily: "'Space Grotesk', sans-serif",
+    display: 'block', fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
     color: 'rgba(20,20,30,0.4)', marginBottom: 8,
   },
   input: {
-    width: '100%',
-    padding: '12px 14px',
-    borderRadius: 12,
-    border: '1px solid rgba(20,20,30,0.1)',
-    background: '#F7F7FA',
-    fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-    color: '#1A1A1F',
-    boxSizing: 'border-box',
-    transition: 'all 0.15s',
+    width: '100%', padding: '12px 14px', borderRadius: 12,
+    border: '1px solid rgba(20,20,30,0.1)', background: '#F7F7FA',
+    fontSize: 14, fontFamily: "'Outfit', sans-serif",
+    color: '#1A1A1F', boxSizing: 'border-box', transition: 'all 0.15s',
   },
-  formActions: {
-    display: 'flex', gap: 10, marginTop: 6,
-  },
+  formActions: { display: 'flex', gap: 10, marginTop: 6 },
   saveBtn: {
     background: '#22C55E', color: '#fff', border: 'none',
     padding: '11px 22px', borderRadius: 12,
@@ -639,63 +552,36 @@ const s = {
     fontFamily: "'Outfit', sans-serif",
   },
   empty: {
-    background: '#fff',
-    border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, padding: '40px 0',
-    textAlign: 'center',
+    background: '#fff', border: '1px solid rgba(20,20,30,0.07)',
+    borderRadius: 18, padding: '40px 0', textAlign: 'center',
   },
   emptyText: {
     fontFamily: "'Space Grotesk', sans-serif",
-    color: 'rgba(20,20,30,0.35)', fontSize: 13,
-    marginTop: 8,
+    color: 'rgba(20,20,30,0.35)', fontSize: 13, marginTop: 8,
   },
   tableCard: {
-    background: '#fff',
-    border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    overflow: 'hidden',
+    background: '#fff', border: '1px solid rgba(20,20,30,0.07)',
+    borderRadius: 18, overflow: 'hidden',
   },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
+  table: { width: '100%', borderCollapse: 'collapse' },
   th: {
-    textAlign: 'left',
-    padding: '14px 20px',
+    textAlign: 'left', padding: '14px 20px',
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
     color: 'rgba(20,20,30,0.4)',
     borderBottom: '1px solid rgba(20,20,30,0.07)',
   },
-  tr: {
-    borderBottom: '1px solid rgba(20,20,30,0.05)',
-  },
-  td: {
-    padding: '14px 20px',
-    fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-  },
+  tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
+  td: { padding: '14px 20px', fontSize: 14, fontFamily: "'Outfit', sans-serif" },
   statusBadge: {
-    display: 'inline-block',
-    padding: '4px 12px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
-    fontFamily: "'Space Grotesk', sans-serif",
+    display: 'inline-block', padding: '4px 12px', borderRadius: 20,
+    fontSize: 12, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif",
     textTransform: 'capitalize',
   },
-  actionButtons: {
-    display: 'flex',
-    gap: 8,
-    justifyContent: 'flex-end',
-  },
+  actionButtons: { display: 'flex', gap: 8, justifyContent: 'flex-end' },
   actionBtn: {
-    padding: '6px 12px',
-    borderRadius: 10,
-    border: 'none',
-    cursor: 'pointer',
-    fontWeight: 600,
-    fontSize: 12,
+    padding: '6px 12px', borderRadius: 10, border: 'none',
+    cursor: 'pointer', fontWeight: 600, fontSize: 12,
     fontFamily: "'Space Grotesk', sans-serif",
   },
 };

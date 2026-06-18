@@ -3,7 +3,6 @@
 import { formatCurrency } from '../../app/lib/currency';
 
 export default function DashboardAlertCards({
-  pendingAdvances,
   pendingSettlements,
   pendingReceivables,
   activeTrips,
@@ -12,14 +11,6 @@ export default function DashboardAlertCards({
   onNavigate
 }) {
   const cards = [
-    {
-      title: 'Pending Advances',
-      count: pendingAdvances,
-      priority: pendingAdvances > 0 ? 'high' : 'low',
-      color: pendingAdvances > 0 ? '#EF4444' : '#22C55E',
-      link: '/advances',
-      icon: 'ti ti-credit-card',
-    },
     {
       title: 'Pending Settlements',
       count: pendingSettlements,
@@ -65,8 +56,8 @@ export default function DashboardAlertCards({
   return (
     <div style={s.cardsGrid}>
       {cards.map((card, index) => (
-        <div 
-          key={index} 
+        <div
+          key={index}
           style={{ ...s.card, borderColor: card.color }}
           onClick={() => onNavigate(card.link)}
         >
@@ -123,9 +114,7 @@ const s = {
     fontFamily: "'Space Grotesk', sans-serif",
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
-  cardContent: {
-    marginBottom: 16,
-  },
+  cardContent: { marginBottom: 16 },
   cardTitle: {
     fontFamily: "'Outfit', sans-serif",
     fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: '0 0 8px',

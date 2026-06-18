@@ -31,7 +31,6 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [notificationsError, setNotificationsError] = useState(null);
-  const [pendingAdvances, setPendingAdvances] = useState(0);
   const [pendingSettlements, setPendingSettlements] = useState(0);
   const [pendingCustomerPayments, setPendingCustomerPayments] = useState(0);
   const [overduePayments, setOverduePayments] = useState(0);
@@ -141,9 +140,7 @@ export default function Dashboard() {
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
-      const [advRes, tripsRes, custRes, drvRes] = await Promise.all([
-        supabase.from('advance_requests').select('id, amount, driver_id, status, created_at')
-          .eq('owner_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+      const [tripsRes, custRes, drvRes] = await Promise.all([
         supabase.from('trips').select('id, truck_id, driver_id, freight_amount, status, created_at')
           .eq('owner_id', user.id).eq('status', 'pending_settlement').order('created_at', { ascending: false }),
         supabase.from('customer_payments').select('id, customer_id, amount, status, created_at')
@@ -153,17 +150,10 @@ export default function Dashboard() {
       ]);
 
       const newNotifications = [];
-      const adv = advRes.data || [];
       const trips = tripsRes.data || [];
       const cust = custRes.data || [];
       const drv = drvRes.data || [];
 
-      if (adv.length > 0) newNotifications.push({
-        id: 'advance-requests', title: 'Pending Advance Requests',
-        description: `${adv.length} driver advance requests awaiting approval`,
-        count: adv.length, priority: adv.length >= 5 ? 'high' : adv.length >= 2 ? 'medium' : 'low',
-        time: `${adv.length} request${adv.length > 1 ? 's' : ''}`, action: '/advance-requests', actionText: 'Review'
-      });
       if (trips.length > 0) newNotifications.push({
         id: 'trips-pending-settlement', title: 'Trips Pending Settlement',
         description: `${trips.length} completed trips awaiting final settlement`,
@@ -194,19 +184,16 @@ export default function Dashboard() {
   const fetchAlertData = async () => {
     if (!user) return;
     try {
-      const [advRes, settlRes, custRes, overdueRes, transitRes, waitRes, activeRes, delivRes, payableRes] = await Promise.all([
-        supabase.from('advance_requests').select('id').eq('owner_id', user.id).eq('status', 'pending'),
+      const [settlRes, custRes, overdueRes, transitRes, waitRes, delivRes, payableRes] = await Promise.all([
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'pending_settlement'),
         supabase.from('customer_payments').select('id').eq('owner_id', user.id).eq('status', 'pending'),
         supabase.from('customer_payments').select('id').eq('owner_id', user.id).eq('status', 'overdue'),
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'in_transit'),
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'waiting_for_delivery'),
-        supabase.from('trips').select('id').eq('owner_id', user.id).in('status', ['assigned', 'loading', 'in_transit', 'unloading']),
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'delivered').eq('close_status', true),
         supabase.from('settlements').select('net_payable').eq('owner_id', user.id).eq('payment_status', 'pending')
       ]);
 
-      setPendingAdvances(advRes.data?.length || 0);
       setPendingSettlements(settlRes.data?.length || 0);
       setPendingCustomerPayments(custRes.data?.length || 0);
       setOverduePayments(overdueRes.data?.length || 0);
@@ -245,7 +232,6 @@ export default function Dashboard() {
       />
 
       <DashboardAlertCards
-        pendingAdvances={pendingAdvances}
         pendingSettlements={pendingSettlements}
         pendingReceivables={pendingCustomerPayments}
         activeTrips={tripsInTransit + tripsWaitingForDelivery}
@@ -255,7 +241,6 @@ export default function Dashboard() {
       />
 
       <NotificationPanel
-        pendingAdvances={pendingAdvances}
         pendingSettlements={pendingSettlements}
         pendingCustomerPayments={pendingCustomerPayments}
         overduePayments={overduePayments}
@@ -296,10 +281,7 @@ const s = {
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
   shell: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 24,
-    paddingBottom: 40,
-    width: '100%',
+    display: 'flex', flexDirection: 'column',
+    gap: 24, paddingBottom: 40, width: '100%',
   },
 };
