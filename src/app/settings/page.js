@@ -49,42 +49,42 @@ export default function SettingsPage({ user, onLogout }) {
     }
   };
 
- const saveProfile = async () => {
-  if (!profileForm.name || profileForm.name.trim().length < 2) {
-    alert('Enter valid name (at least 2 characters)');
-    return;
-  }
-
-  try {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) { alert('Not authenticated'); return; }
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        name: profileForm.name.trim(),
-        phone: profileForm.phone.trim(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', authUser.id);  // ← use authUser.id directly
-
-    if (error) {
-      alert(error.message);
+  const saveProfile = async () => {
+    if (!profileForm.name || profileForm.name.trim().length < 2) {
+      alert('Enter valid name (at least 2 characters)');
       return;
     }
 
-    setProfile({
-      ...profile,
-      name: profileForm.name.trim(),
-      phone: profileForm.phone.trim(),
-    });
-    setShowProfileForm(false);
-    alert('Profile updated successfully');
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    alert('Failed to update profile. Please try again.');
-  }
-};
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) { alert('Not authenticated'); return; }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: profileForm.name.trim(),
+          phone: profileForm.phone.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', authUser.id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      setProfile({
+        ...profile,
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim(),
+      });
+      setShowProfileForm(false);
+      alert('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
@@ -133,7 +133,7 @@ export default function SettingsPage({ user, onLogout }) {
                 <p style={s.detailValue}>{profile?.phone || 'Not set'}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setShowProfileForm(true)}
               style={s.editButton}
             >
@@ -170,25 +170,6 @@ export default function SettingsPage({ user, onLogout }) {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Account Section */}
-        <div style={s.sectionCard}>
-          <h2 style={s.sectionTitle}>Account Actions</h2>
-          <div style={s.actionButtons}>
-            <button onClick={() => alert('Password reset functionality would go here')} style={s.actionBtn}>
-              <i className="ti ti-lock" style={{ marginRight: 8 }} /> Change Password
-            </button>
-            <button onClick={() => alert('Email settings functionality would go here')} style={s.actionBtn}>
-              <i className="ti ti-mail" style={{ marginRight: 8 }} /> Email Settings
-            </button>
-            <button onClick={() => alert('Notification settings functionality would go here')} style={s.actionBtn}>
-              <i className="ti ti-bell" style={{ marginRight: 8 }} /> Notification Settings
-            </button>
-            <button onClick={() => alert('Theme settings functionality would go here')} style={s.actionBtn}>
-              <i className="ti ti-palette" style={{ marginRight: 8 }} /> Theme Settings
-            </button>
-          </div>
         </div>
       </div>
     </DashboardLayout>
@@ -345,27 +326,5 @@ const s = {
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
-  },
-  actionButtons: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: 16,
-  },
-  actionBtn: {
-    display: 'flex', alignItems: 'center',
-    background: '#fff',
-    border: '1px solid rgba(20,20,30,0.07)',
-    padding: '16px 20px',
-    borderRadius: 14,
-    cursor: 'pointer',
-    fontWeight: 500,
-    fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-    color: '#1A1A1F',
-    transition: 'all 0.2s',
-    ':hover': {
-      background: '#F7F7FA',
-      borderColor: 'rgba(124,99,255,0.25)',
-    },
   },
 };

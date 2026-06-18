@@ -111,7 +111,7 @@ export default function ExpensesPage({ user, onLogout }) {
 
       const { data, error } = await supabase
         .from('drivers')
-        .select('id, profile_id, profiles(name)')
+        .select('id, name')
         .eq('owner_id', authUser.id);
 
       if (error) {
@@ -215,7 +215,6 @@ export default function ExpensesPage({ user, onLogout }) {
         return;
       }
 
-      // Verify ownership before delete
       const { data: expense, error: fetchError } = await supabase
         .from('trip_expenses')
         .select('owner_id')
@@ -256,19 +255,15 @@ export default function ExpensesPage({ user, onLogout }) {
 
   const getDriverName = (id) => {
     const driver = drivers.find(d => d.id === id);
-    return driver ? driver.profiles?.name : 'Unknown';
+    return driver ? driver.name : 'Unknown';
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending':
-        return '#FB923C';
-      case 'paid':
-        return '#3B82F6';
-      case 'approved':
-        return '#22C55E';
-      default:
-        return '#6B7280';
+      case 'pending': return '#FB923C';
+      case 'paid': return '#3B82F6';
+      case 'approved': return '#22C55E';
+      default: return '#6B7280';
     }
   };
 
@@ -292,7 +287,6 @@ export default function ExpensesPage({ user, onLogout }) {
             <p style={s.headerSub}>Fleet</p>
             <h1 style={s.headerTitle}>Expenses Management</h1>
           </div>
-
           <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Expense
           </button>
@@ -309,7 +303,6 @@ export default function ExpensesPage({ user, onLogout }) {
               <h3 style={s.summaryValue}>{formatCurrency(summary.total)}</h3>
             </div>
           </div>
-
           <div style={s.summaryCard}>
             <div style={s.summaryIcon}>
               <i className="ti ti-wallet" style={{ fontSize: 24, color: '#22C55E' }} />
@@ -319,7 +312,6 @@ export default function ExpensesPage({ user, onLogout }) {
               <h3 style={s.summaryValue}>{formatCurrency(summary.driverPaid)}</h3>
             </div>
           </div>
-
           <div style={s.summaryCard}>
             <div style={s.summaryIcon}>
               <i className="ti ti-building-bank" style={{ fontSize: 24, color: '#3B82F6' }} />
@@ -329,7 +321,6 @@ export default function ExpensesPage({ user, onLogout }) {
               <h3 style={s.summaryValue}>{formatCurrency(summary.companyPaid)}</h3>
             </div>
           </div>
-
           <div style={s.summaryCard}>
             <div style={s.summaryIcon}>
               <i className="ti ti-clock" style={{ fontSize: 24, color: '#FB923C' }} />
@@ -346,7 +337,6 @@ export default function ExpensesPage({ user, onLogout }) {
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add New Expense</h3>
-
             <div style={s.formGrid}>
               <div style={s.formField}>
                 <label style={s.label}>Trip</label>
@@ -357,9 +347,7 @@ export default function ExpensesPage({ user, onLogout }) {
                 >
                   <option value="">Select Trip</option>
                   {trips.map((trip) => (
-                    <option key={trip.id} value={trip.id}>
-                      {trip.customer}
-                    </option>
+                    <option key={trip.id} value={trip.id}>{trip.customer}</option>
                   ))}
                 </select>
               </div>
@@ -373,9 +361,7 @@ export default function ExpensesPage({ user, onLogout }) {
                 >
                   <option value="">Select Driver</option>
                   {drivers.map((driver) => (
-                    <option key={driver.id} value={driver.id}>
-                      {driver.profiles?.name}
-                    </option>
+                    <option key={driver.id} value={driver.id}>{driver.name}</option>
                   ))}
                 </select>
               </div>
@@ -434,7 +420,9 @@ export default function ExpensesPage({ user, onLogout }) {
               <button onClick={saveExpense} style={s.saveBtn} disabled={formLoading}>
                 {formLoading ? 'Adding...' : 'Add Expense'}
               </button>
-              <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
+              <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>
+                Cancel
+              </button>
             </div>
           </div>
         )}
@@ -464,7 +452,11 @@ export default function ExpensesPage({ user, onLogout }) {
                     <td style={s.td}>{expense.category}</td>
                     <td style={s.td}>{formatCurrency(expense.amount || 0)}</td>
                     <td style={s.td}>
-                      <span style={{ ...s.paidByBadge, backgroundColor: expense.paid_by === 'driver_paid' ? '#22C55E15' : '#3B82F615', color: expense.paid_by === 'driver_paid' ? '#16A34A' : '#2563EB' }}>
+                      <span style={{
+                        ...s.paidByBadge,
+                        backgroundColor: expense.paid_by === 'driver_paid' ? '#22C55E15' : '#3B82F615',
+                        color: expense.paid_by === 'driver_paid' ? '#16A34A' : '#2563EB',
+                      }}>
                         {expense.paid_by === 'driver_paid' ? 'Driver' : 'Company'}
                       </span>
                     </td>
@@ -479,7 +471,7 @@ export default function ExpensesPage({ user, onLogout }) {
                         <option value="approved">Approved</option>
                       </select>
                     </td>
-                    <td style={{ ...s.td, textAlign: 'right' }}>
+                    <td style={s.td}>
                       <button onClick={() => deleteExpense(expense.id)} style={s.deleteBtn}>
                         Delete
                       </button>
@@ -564,28 +556,18 @@ const s = {
     gap: 16,
   },
   summaryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 48, height: 48, borderRadius: 12,
     background: 'rgba(124,99,255,0.1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   summaryLabel: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 11,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: 'rgba(20,20,30,0.4)',
-    margin: '0 0 6px',
+    fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
+    color: 'rgba(20,20,30,0.4)', margin: '0 0 6px',
   },
   summaryValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 20,
-    fontWeight: 700,
-    margin: 0,
-    color: '#1A1A1F',
+    fontSize: 20, fontWeight: 700, margin: 0, color: '#1A1A1F',
   },
   formCard: {
     background: '#fff',
@@ -605,12 +587,9 @@ const s = {
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 16,
-    marginBottom: 20,
+    gap: 16, marginBottom: 20,
   },
-  formField: {
-    marginBottom: 14,
-  },
+  formField: { marginBottom: 14 },
   label: {
     display: 'block',
     fontFamily: "'Space Grotesk', sans-serif",
@@ -629,9 +608,7 @@ const s = {
     boxSizing: 'border-box',
     transition: 'all 0.15s',
   },
-  formActions: {
-    display: 'flex', gap: 10, marginTop: 6,
-  },
+  formActions: { display: 'flex', gap: 10, marginTop: 6 },
   saveBtn: {
     background: '#22C55E', color: '#fff', border: 'none',
     padding: '11px 22px', borderRadius: 12,
@@ -656,13 +633,9 @@ const s = {
   tableCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    overflow: 'hidden',
+    borderRadius: 18, overflow: 'hidden',
   },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
+  table: { width: '100%', borderCollapse: 'collapse' },
   th: {
     textAlign: 'left',
     padding: '14px 20px',
@@ -671,24 +644,13 @@ const s = {
     color: 'rgba(20,20,30,0.4)',
     borderBottom: '1px solid rgba(20,20,30,0.07)',
   },
-  tr: {
-    borderBottom: '1px solid rgba(20,20,30,0.05)',
-  },
-  td: {
-    padding: '14px 20px',
-    fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
-  },
+  tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
+  td: { padding: '14px 20px', fontSize: 14, fontFamily: "'Outfit', sans-serif" },
   statusSelect: {
-    border: 'none',
-    borderRadius: 20,
-    padding: '4px 12px',
-    fontSize: 12,
-    fontWeight: 600,
+    border: 'none', borderRadius: 20,
+    padding: '4px 12px', fontSize: 12, fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
-    color: '#fff',
-    cursor: 'pointer',
-    appearance: 'none',
+    color: '#fff', cursor: 'pointer', appearance: 'none',
     backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 8px center',
@@ -704,10 +666,8 @@ const s = {
   },
   paidByBadge: {
     display: 'inline-block',
-    padding: '4px 12px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
+    padding: '4px 12px', borderRadius: 20,
+    fontSize: 12, fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
   },
 };
