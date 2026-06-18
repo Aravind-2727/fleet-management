@@ -392,7 +392,7 @@ export default function TripsPage({ user, onLogout }) {
                         {trip.status?.replace('_', ' ')}
                       </span>
                     </td>
-                    <td style={{ ...s.td, textAlign: 'right' }}>
+             <td style={s.td}>
                       <div style={s.actionButtons}>
                         {trip.status === 'assigned' && (
                           <button
@@ -578,7 +578,7 @@ const s = {
     fontSize: 12, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif",
     textTransform: 'capitalize',
   },
-  actionButtons: { display: 'flex', gap: 8, justifyContent: 'flex-end' },
+  actionButtons: { display: 'flex', gap: 8, justifyContent: 'flex-start' },
   actionBtn: {
     padding: '6px 12px', borderRadius: 10, border: 'none',
     cursor: 'pointer', fontWeight: 600, fontSize: 12,
