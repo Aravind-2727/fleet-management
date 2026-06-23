@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../lib/supabase';
+import { uploadMultipleDocuments, getDocuments, createSignedUrl, downloadDocument, deleteDocument, getFileIcon, formatFileSize } from '../lib/documents';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function SettlementsPage({ user, onLogout }) {
@@ -10,6 +11,10 @@ export default function SettlementsPage({ user, onLogout }) {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [settlementFiles, setSettlementFiles] = useState([]);
+  const [settlementDocuments, setSettlementDocuments] = useState({});
+  const [expandedSettlementId, setExpandedSettlementId] = useState(null);
+  const [docLoading, setDocLoading] = useState({});
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', {
@@ -140,6 +145,66 @@ export default function SettlementsPage({ user, onLogout }) {
     }
   };
 
+  const fetchSettlementDocuments = async (settlementId) => {
+    try {
+      const docs = await getDocuments(settlementId, 'settlement');
+      setSettlementDocuments(prev => ({ ...prev, [settlementId]: docs }));
+    } catch (error) {
+      console.error('Error fetching settlement documents:', error);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSettlementFiles(prev => [...prev, ...files]);
+  };
+
+  const removeSettlementFile = (index) => {
+    setSettlementFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePreviewDocument = async (filePath, fileName) => {
+    try {
+      const signedUrl = await createSignedUrl(filePath);
+      window.open(signedUrl, '_blank');
+    } catch (error) {
+      console.error('Error creating preview URL:', error);
+      alert('Failed to open document preview');
+    }
+  };
+
+  const handleDownloadDocument = async (filePath, fileName) => {
+    try {
+      await downloadDocument(filePath, fileName);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
+    }
+  };
+
+  const handleDeleteDocument = async (documentId, filePath, settlementId) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      setDocLoading(prev => ({ ...prev, [documentId]: true }));
+      await deleteDocument(documentId, filePath);
+      const updatedDocs = settlementDocuments[settlementId].filter(d => d.id !== documentId);
+      setSettlementDocuments(prev => ({ ...prev, [settlementId]: updatedDocs }));
+      alert('Document deleted successfully');
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
+    } finally {
+      setDocLoading(prev => ({ ...prev, [documentId]: false }));
+    }
+  };
+
+  const toggleSettlementExpand = (settlementId) => {
+    setExpandedSettlementId(prev => prev === settlementId ? null : settlementId);
+    if (expandedSettlementId !== settlementId && !settlementDocuments[settlementId]) {
+      fetchSettlementDocuments(settlementId);
+    }
+  };
+
   const saveSettlement = async () => {
     if (!formData.driverId || !formData.tripId || !formData.netPayable) {
       alert('Please fill all required fields');
@@ -163,7 +228,7 @@ export default function SettlementsPage({ user, onLogout }) {
         return;
       }
 
-      const { error } = await supabase
+      const { data: settlementData, error } = await supabase
         .from('settlements')
         .insert([{
           owner_id: authUser.id,
@@ -176,12 +241,23 @@ export default function SettlementsPage({ user, onLogout }) {
           payment_status: formData.paymentStatus,
           payment_mode: formData.paymentMode || null,
           payment_date: formData.paymentDate || null,
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) {
         console.error('Error creating settlement:', error);
         alert(error.message);
         return;
+      }
+
+      if (settlementFiles.length > 0) {
+        try {
+          await uploadMultipleDocuments(settlementFiles, settlementData.id, 'settlement');
+        } catch (uploadError) {
+          console.error('Error uploading proofs:', uploadError);
+          alert('Settlement created but some proofs failed to upload');
+        }
       }
 
       await supabase
@@ -200,6 +276,7 @@ export default function SettlementsPage({ user, onLogout }) {
         paymentMode: '',
         paymentDate: '',
       });
+      setSettlementFiles([]);
       setShowForm(false);
       fetchSettlements();
       alert('Settlement created successfully');
@@ -415,6 +492,36 @@ export default function SettlementsPage({ user, onLogout }) {
                   onChange={(e) => setFormData({...formData, paymentDate: e.target.value})} style={s.input} />
               </div>
 
+              <div style={s.formField}>
+                <label style={s.label}>Proof Documents</label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  style={{ ...s.input, padding: 8, background: '#fff' }}
+                />
+                {settlementFiles.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {settlementFiles.map((file, index) => (
+                      <span key={index} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '4px 10px', borderRadius: 8,
+                        background: 'rgba(124,99,255,0.1)', fontSize: 12,
+                        color: '#7C63FF', fontFamily: "'Outfit', sans-serif"
+                      }}>
+                        <i className="ti ti-file" style={{ fontSize: 14 }} />
+                        {file.name}
+                        <button type="button" onClick={() => removeSettlementFile(index)} style={{
+                          background: 'none', border: 'none', color: '#7C63FF',
+                          cursor: 'pointer', padding: 0, fontSize: 16, lineHeight: 1
+                        }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
             <div style={s.formActions}>
               <button onClick={saveSettlement} style={s.saveBtn}>Save Settlement</button>
@@ -437,13 +544,18 @@ export default function SettlementsPage({ user, onLogout }) {
                   <th style={s.th}>Net Payable</th>
                   <th style={s.th}>Status</th>
                   <th style={s.th}>Payment Mode</th>
+                  <th style={s.th}>Proofs</th>
                   <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {settlements.map((settlement) => (
-                  <tr key={settlement.id} style={s.tr}>
-                    <td style={s.td}>{getDriverName(settlement.driver_id)}</td>
+                  <Fragment key={settlement.id}>
+                    <tr
+                      onClick={() => toggleSettlementExpand(settlement.id)}
+                      style={{ ...s.tr, cursor: 'pointer' }}
+                    >
+                      <td style={s.td}>{getDriverName(settlement.driver_id)}</td>
                     <td style={s.td}>{getTripInfo(settlement.trip_id)}</td>
                     <td style={s.td}>{formatCurrency(settlement.earnings || 0)}</td>
                     <td style={s.td}>{formatCurrency(settlement.net_payable || 0)}</td>
@@ -463,10 +575,101 @@ export default function SettlementsPage({ user, onLogout }) {
                       </select>
                     </td>
                     <td style={s.td}>{settlement.payment_mode || '—'}</td>
+                    <td style={s.td}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 10px', borderRadius: 8,
+                        background: 'rgba(124,99,255,0.08)',
+                        fontSize: 12, color: '#7C63FF',
+                        fontFamily: "'Outfit', sans-serif",
+                      }} onClick={(e) => { e.stopPropagation(); toggleSettlementExpand(settlement.id); }}>
+                        <i className="ti ti-file" style={{ fontSize: 14 }} />
+                        {settlementDocuments[settlement.id]?.length || 0}
+                      </span>
+                    </td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
                       <button onClick={() => deleteSettlement(settlement.id)} style={s.deleteBtn}>Delete</button>
                     </td>
-                  </tr>
+                    </tr>
+                    {expandedSettlementId === settlement.id && (
+                      <tr style={s.expandedRow}>
+                        <td colSpan={8} style={{ padding: '16px 20px', background: '#FAFAFD' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <h4 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1A1F' }}>
+                              Proof Documents
+                            </h4>
+                            <label style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '6px 12px', borderRadius: 8,
+                              background: '#7C63FF', color: '#fff',
+                              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              fontFamily: "'Outfit', sans-serif",
+                            }}>
+                              <i className="ti ti-upload" style={{ fontSize: 14 }} />
+                              Upload
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*,application/pdf"
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                  const files = Array.from(e.target.files);
+                                  if (files.length === 0) return;
+                                  try {
+                                    await uploadMultipleDocuments(files, settlement.id, 'settlement');
+                                    fetchSettlementDocuments(settlement.id);
+                                    alert('Proofs uploaded successfully');
+                                  } catch (err) {
+                                    console.error('Error uploading proofs:', err);
+                                    alert('Failed to upload proofs');
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {(settlementDocuments[settlement.id] || []).length === 0 ? (
+                              <p style={{ margin: 0, fontSize: 13, color: 'rgba(20,20,30,0.45)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                No proof documents uploaded yet
+                              </p>
+                            ) : (
+                              (settlementDocuments[settlement.id] || []).map(doc => (
+                                <div key={doc.id} style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  padding: '10px 14px', borderRadius: 10,
+                                  background: '#fff', border: '1px solid rgba(20,20,30,0.06)',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                    <i className={getFileIcon(doc.file_type)} style={{ fontSize: 20, color: '#7C63FF' }} />
+                                    <div style={{ minWidth: 0 }}>
+                                      <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif", color: '#1A1A1F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {doc.file_name}
+                                      </p>
+                                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(20,20,30,0.4)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                        {formatFileSize(doc.metadata?.size || 0)} · {new Date(doc.created_at).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => handlePreviewDocument(doc.file_path, doc.file_name)} style={s.docPreviewBtn} title="Preview">
+                                      <i className="ti ti-eye" style={{ fontSize: 16 }} />
+                                    </button>
+                                    <button onClick={() => handleDownloadDocument(doc.file_path, doc.file_name)} style={s.docDownloadBtn} title="Download">
+                                      <i className="ti ti-download" style={{ fontSize: 16 }} />
+                                    </button>
+                                    <button onClick={() => handleDeleteDocument(doc.id, doc.file_path, settlement.id)} style={s.docDeleteBtn} title="Delete" disabled={docLoading[doc.id]}>
+                                      <i className="ti ti-trash" style={{ fontSize: 16 }} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -512,4 +715,8 @@ const s = {
   td: { padding: '14px 20px', fontSize: 14, fontFamily: "'Outfit', sans-serif" },
   statusSelect: { border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif", cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 32 },
   deleteBtn: { background: 'rgba(224,82,74,0.1)', border: '1px solid rgba(224,82,74,0.25)', color: '#E0524A', padding: '7px 16px', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: "'Outfit', sans-serif" },
+  expandedRow: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
+  docPreviewBtn: { background: 'rgba(124,99,255,0.1)', border: '1px solid rgba(124,99,255,0.2)', color: '#7C63FF', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+  docDownloadBtn: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#3B82F6', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+  docDeleteBtn: { background: 'rgba(224,82,74,0.1)', border: '1px solid rgba(224,82,74,0.2)', color: '#E0524A', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
 };

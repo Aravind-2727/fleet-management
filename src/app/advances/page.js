@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
 
@@ -29,12 +29,7 @@ export default function AdvancesPage({ user, onLogout }) {
     totalPaid: 0,
   });
 
-  useEffect(() => {
-    fetchAdvances();
-    fetchDrivers();
-  }, []);
-
-  const fetchAdvances = async () => {
+  const fetchAdvances = useCallback(async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) { setAdvances([]); setLoading(false); return; }
@@ -55,16 +50,9 @@ export default function AdvancesPage({ user, onLogout }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const calculateSummary = (advancesData) => {
-    const totalPending = advancesData.filter(a => a.status === 'pending').reduce((sum, a) => sum + (a.amount || 0), 0);
-    const totalApproved = advancesData.filter(a => a.status === 'approved').reduce((sum, a) => sum + (a.amount || 0), 0);
-    const totalPaid = advancesData.filter(a => a.status === 'paid').reduce((sum, a) => sum + (a.amount || 0), 0);
-    setSummary({ totalPending, totalApproved, totalPaid });
-  };
-
-  const fetchDrivers = async () => {
+  const fetchDrivers = useCallback(async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) { setDrivers([]); return; }
@@ -80,6 +68,18 @@ export default function AdvancesPage({ user, onLogout }) {
     } catch (error) {
       console.error('Error fetching drivers:', error);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchAdvances();
+    fetchDrivers();
+  }, [fetchAdvances, fetchDrivers]);
+
+  const calculateSummary = (advancesData) => {
+    const totalPending = advancesData.filter(a => a.status === 'pending').reduce((sum, a) => sum + (a.amount || 0), 0);
+    const totalApproved = advancesData.filter(a => a.status === 'approved').reduce((sum, a) => sum + (a.amount || 0), 0);
+    const totalPaid = advancesData.filter(a => a.status === 'paid').reduce((sum, a) => sum + (a.amount || 0), 0);
+    setSummary({ totalPending, totalApproved, totalPaid });
   };
 
   const saveAdvance = async () => {

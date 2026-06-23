@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/currency';
+import { uploadMultipleDocuments, getDocuments, createSignedUrl, downloadDocument, deleteDocument, getFileIcon, formatFileSize } from '../lib/documents';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function ExpensesPage({ user, onLogout }) {
@@ -21,6 +22,10 @@ export default function ExpensesPage({ user, onLogout }) {
     paidBy: 'driver_paid',
     notes: '',
   });
+  const [receiptFiles, setReceiptFiles] = useState([]);
+  const [expenseDocuments, setExpenseDocuments] = useState({});
+  const [expandedExpenseId, setExpandedExpenseId] = useState(null);
+  const [docLoading, setDocLoading] = useState({});
 
   const [summary, setSummary] = useState({
     total: 0,
@@ -124,6 +129,24 @@ export default function ExpensesPage({ user, onLogout }) {
     }
   };
 
+  const fetchExpenseDocuments = async (expenseId) => {
+    try {
+      const docs = await getDocuments(expenseId, 'expense');
+      setExpenseDocuments(prev => ({ ...prev, [expenseId]: docs }));
+    } catch (error) {
+      console.error('Error fetching expense documents:', error);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setReceiptFiles(prev => [...prev, ...files]);
+  };
+
+  const removeReceiptFile = (index) => {
+    setReceiptFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const saveExpense = async () => {
     if (!formData.tripId || !formData.driverId || !formData.amount) {
       alert('Please fill all required fields');
@@ -144,7 +167,7 @@ export default function ExpensesPage({ user, onLogout }) {
       }
 
       setFormLoading(true);
-      const { error } = await supabase
+      const { data: expenseData, error } = await supabase
         .from('trip_expenses')
         .insert([
           {
@@ -157,13 +180,24 @@ export default function ExpensesPage({ user, onLogout }) {
             status: 'pending',
             notes: formData.notes,
           },
-        ]);
+        ])
+        .select()
+        .single();
 
       if (error) {
         console.error('Error creating expense:', error);
         alert(error.message);
         setFormLoading(false);
         return;
+      }
+
+      if (receiptFiles.length > 0) {
+        try {
+          await uploadMultipleDocuments(receiptFiles, expenseData.id, 'expense');
+        } catch (uploadError) {
+          console.error('Error uploading receipts:', uploadError);
+          alert('Expense created but some receipts failed to upload');
+        }
       }
 
       setFormData({
@@ -174,6 +208,7 @@ export default function ExpensesPage({ user, onLogout }) {
         paidBy: 'driver_paid',
         notes: '',
       });
+      setReceiptFiles([]);
       setShowForm(false);
 
       fetchExpenses();
@@ -264,6 +299,48 @@ export default function ExpensesPage({ user, onLogout }) {
       case 'paid': return '#3B82F6';
       case 'approved': return '#22C55E';
       default: return '#6B7280';
+    }
+  };
+
+  const handlePreviewDocument = async (filePath, fileName) => {
+    try {
+      const signedUrl = await createSignedUrl(filePath);
+      window.open(signedUrl, '_blank');
+    } catch (error) {
+      console.error('Error creating preview URL:', error);
+      alert('Failed to open document preview');
+    }
+  };
+
+  const handleDownloadDocument = async (filePath, fileName) => {
+    try {
+      await downloadDocument(filePath, fileName);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
+    }
+  };
+
+  const handleDeleteDocument = async (documentId, filePath, expenseId) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      setDocLoading(prev => ({ ...prev, [documentId]: true }));
+      await deleteDocument(documentId, filePath);
+      const updatedDocs = expenseDocuments[expenseId].filter(d => d.id !== documentId);
+      setExpenseDocuments(prev => ({ ...prev, [expenseId]: updatedDocs }));
+      alert('Document deleted successfully');
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
+    } finally {
+      setDocLoading(prev => ({ ...prev, [documentId]: false }));
+    }
+  };
+
+  const toggleExpenseExpand = (expenseId) => {
+    setExpandedExpenseId(prev => prev === expenseId ? null : expenseId);
+    if (expandedExpenseId !== expenseId && !expenseDocuments[expenseId]) {
+      fetchExpenseDocuments(expenseId);
     }
   };
 
@@ -414,6 +491,36 @@ export default function ExpensesPage({ user, onLogout }) {
                   style={s.input}
                 />
               </div>
+
+              <div style={s.formField}>
+                <label style={s.label}>Receipts</label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  style={{ ...s.input, padding: 8, background: '#fff' }}
+                />
+                {receiptFiles.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {receiptFiles.map((file, index) => (
+                      <span key={index} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '4px 10px', borderRadius: 8,
+                        background: 'rgba(124,99,255,0.1)', fontSize: 12,
+                        color: '#7C63FF', fontFamily: "'Outfit', sans-serif"
+                      }}>
+                        <i className="ti ti-file" style={{ fontSize: 14 }} />
+                        {file.name}
+                        <button type="button" onClick={() => removeReceiptFile(index)} style={{
+                          background: 'none', border: 'none', color: '#7C63FF',
+                          cursor: 'pointer', padding: 0, fontSize: 16, lineHeight: 1
+                        }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={s.formActions}>
@@ -441,42 +548,138 @@ export default function ExpensesPage({ user, onLogout }) {
                   <th style={s.th}>Amount</th>
                   <th style={s.th}>Paid By</th>
                   <th style={s.th}>Status</th>
+                  <th style={s.th}>Receipts</th>
                   <th style={s.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {expenses.map((expense) => (
-                  <tr key={expense.id} style={s.tr}>
-                    <td style={s.td}>{getTripCustomer(expense.trip_id)}</td>
-                    <td style={s.td}>{getDriverName(expense.driver_id)}</td>
-                    <td style={s.td}>{expense.category}</td>
-                    <td style={s.td}>{formatCurrency(expense.amount || 0)}</td>
-                    <td style={s.td}>
-                      <span style={{
-                        ...s.paidByBadge,
-                        backgroundColor: expense.paid_by === 'driver_paid' ? '#22C55E15' : '#3B82F615',
-                        color: expense.paid_by === 'driver_paid' ? '#16A34A' : '#2563EB',
-                      }}>
-                        {expense.paid_by === 'driver_paid' ? 'Driver' : 'Company'}
-                      </span>
-                    </td>
-                    <td style={s.td}>
-                      <select
-                        value={expense.status}
-                        onChange={(e) => updateExpenseStatus(expense.id, e.target.value)}
-                        style={{ ...s.statusSelect, backgroundColor: getStatusColor(expense.status) }}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="paid">Paid</option>
-                        <option value="approved">Approved</option>
-                      </select>
-                    </td>
-                    <td style={s.td}>
-                      <button onClick={() => deleteExpense(expense.id)} style={s.deleteBtn}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={expense.id}>
+                    <tr
+                      onClick={() => toggleExpenseExpand(expense.id)}
+                      style={{ ...s.tr, cursor: 'pointer' }}
+                    >
+                      <td style={s.td}>{getTripCustomer(expense.trip_id)}</td>
+                      <td style={s.td}>{getDriverName(expense.driver_id)}</td>
+                      <td style={s.td}>{expense.category}</td>
+                      <td style={s.td}>{formatCurrency(expense.amount || 0)}</td>
+                      <td style={s.td}>
+                        <span style={{
+                          ...s.paidByBadge,
+                          backgroundColor: expense.paid_by === 'driver_paid' ? '#22C55E15' : '#3B82F615',
+                          color: expense.paid_by === 'driver_paid' ? '#16A34A' : '#2563EB',
+                        }}>
+                          {expense.paid_by === 'driver_paid' ? 'Driver' : 'Company'}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        <select
+                          value={expense.status}
+                          onChange={(e) => updateExpenseStatus(expense.id, e.target.value)}
+                          style={{ ...s.statusSelect, backgroundColor: getStatusColor(expense.status) }}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="paid">Paid</option>
+                          <option value="approved">Approved</option>
+                        </select>
+                      </td>
+                      <td style={s.td}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '4px 10px', borderRadius: 8,
+                          background: 'rgba(124,99,255,0.08)',
+                          fontSize: 12, color: '#7C63FF',
+                          fontFamily: "'Outfit', sans-serif",
+                        }} onClick={(e) => { e.stopPropagation(); toggleExpenseExpand(expense.id); }}>
+                          <i className="ti ti-file" style={{ fontSize: 14 }} />
+                          {expenseDocuments[expense.id]?.length || 0}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        <button onClick={() => deleteExpense(expense.id)} style={s.deleteBtn}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedExpenseId === expense.id && (
+                      <tr style={{ ...s.expandedRow }}>
+                        <td colSpan={8} style={{ padding: '16px 20px', background: '#FAFAFD' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <h4 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1A1F' }}>
+                              Receipts
+                            </h4>
+                            <label style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '6px 12px', borderRadius: 8,
+                              background: '#7C63FF', color: '#fff',
+                              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              fontFamily: "'Outfit', sans-serif",
+                            }}>
+                              <i className="ti ti-upload" style={{ fontSize: 14 }} />
+                              Upload
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*,application/pdf"
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                  const files = Array.from(e.target.files);
+                                  if (files.length === 0) return;
+                                  try {
+                                    await uploadMultipleDocuments(files, expense.id, 'expense');
+                                    fetchExpenseDocuments(expense.id);
+                                    alert('Receipts uploaded successfully');
+                                  } catch (err) {
+                                    console.error('Error uploading receipts:', err);
+                                    alert('Failed to upload receipts');
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {(expenseDocuments[expense.id] || []).length === 0 ? (
+                              <p style={{ margin: 0, fontSize: 13, color: 'rgba(20,20,30,0.45)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                No receipts uploaded yet
+                              </p>
+                            ) : (
+                              (expenseDocuments[expense.id] || []).map(doc => (
+                                <div key={doc.id} style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  padding: '10px 14px', borderRadius: 10,
+                                  background: '#fff', border: '1px solid rgba(20,20,30,0.06)',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                    <i className={getFileIcon(doc.file_type)} style={{ fontSize: 20, color: '#7C63FF' }} />
+                                    <div style={{ minWidth: 0 }}>
+                                      <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif", color: '#1A1A1F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {doc.file_name}
+                                      </p>
+                                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(20,20,30,0.4)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                        {formatFileSize(doc.metadata?.size || 0)} · {new Date(doc.created_at).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => handlePreviewDocument(doc.file_path, doc.file_name)} style={s.docPreviewBtn} title="Preview">
+                                      <i className="ti ti-eye" style={{ fontSize: 16 }} />
+                                    </button>
+                                    <button onClick={() => handleDownloadDocument(doc.file_path, doc.file_name)} style={s.docDownloadBtn} title="Download">
+                                      <i className="ti ti-download" style={{ fontSize: 16 }} />
+                                    </button>
+                                    <button onClick={() => handleDeleteDocument(doc.id, doc.file_path, expense.id)} style={s.docDeleteBtn} title="Delete" disabled={docLoading[doc.id]}>
+                                      <i className="ti ti-trash" style={{ fontSize: 16 }} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -669,5 +872,32 @@ const s = {
     padding: '4px 12px', borderRadius: 20,
     fontSize: 12, fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
+  },
+  expandedRow: {
+    borderBottom: '1px solid rgba(20,20,30,0.05)',
+  },
+  docPreviewBtn: {
+    background: 'rgba(124,99,255,0.1)',
+    border: '1px solid rgba(124,99,255,0.2)',
+    color: '#7C63FF',
+    width: 32, height: 32, borderRadius: 8,
+    cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  docDownloadBtn: {
+    background: 'rgba(59,130,246,0.1)',
+    border: '1px solid rgba(59,130,246,0.2)',
+    color: '#3B82F6',
+    width: 32, height: 32, borderRadius: 8,
+    cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  docDeleteBtn: {
+    background: 'rgba(224,82,74,0.1)',
+    border: '1px solid rgba(224,82,74,0.2)',
+    color: '#E0524A',
+    width: 32, height: 32, borderRadius: 8,
+    cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
   },
 };

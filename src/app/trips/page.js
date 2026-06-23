@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/currency';
+import { uploadMultipleDocuments, getDocuments, createSignedUrl, downloadDocument, deleteDocument, getFileIcon, formatFileSize } from '../lib/documents';
 import DashboardLayout from '../../components/dashboard/layout';
 
 export default function TripsPage({ user, onLogout }) {
@@ -25,6 +26,10 @@ export default function TripsPage({ user, onLogout }) {
     end_date: '',
     notes: '',
   });
+  const [tripFiles, setTripFiles] = useState([]);
+  const [tripDocuments, setTripDocuments] = useState({});
+  const [expandedTripId, setExpandedTripId] = useState(null);
+  const [docLoading, setDocLoading] = useState({});
 
   useEffect(() => {
     fetchTrips();
@@ -94,6 +99,66 @@ export default function TripsPage({ user, onLogout }) {
     }
   };
 
+  const fetchTripDocuments = async (tripId) => {
+    try {
+      const docs = await getDocuments(tripId, 'trip');
+      setTripDocuments(prev => ({ ...prev, [tripId]: docs }));
+    } catch (error) {
+      console.error('Error fetching trip documents:', error);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setTripFiles(prev => [...prev, ...files]);
+  };
+
+  const removeTripFile = (index) => {
+    setTripFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePreviewDocument = async (filePath, fileName) => {
+    try {
+      const signedUrl = await createSignedUrl(filePath);
+      window.open(signedUrl, '_blank');
+    } catch (error) {
+      console.error('Error creating preview URL:', error);
+      alert('Failed to open document preview');
+    }
+  };
+
+  const handleDownloadDocument = async (filePath, fileName) => {
+    try {
+      await downloadDocument(filePath, fileName);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
+    }
+  };
+
+  const handleDeleteDocument = async (documentId, filePath, tripId) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      setDocLoading(prev => ({ ...prev, [documentId]: true }));
+      await deleteDocument(documentId, filePath);
+      const updatedDocs = tripDocuments[tripId].filter(d => d.id !== documentId);
+      setTripDocuments(prev => ({ ...prev, [tripId]: updatedDocs }));
+      alert('Document deleted successfully');
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
+    } finally {
+      setDocLoading(prev => ({ ...prev, [documentId]: false }));
+    }
+  };
+
+  const toggleTripExpand = (tripId) => {
+    setExpandedTripId(prev => prev === tripId ? null : tripId);
+    if (expandedTripId !== tripId && !tripDocuments[tripId]) {
+      fetchTripDocuments(tripId);
+    }
+  };
+
   const validateForm = () => {
     if (!formData.driver_id) { alert('Please select a driver'); return false; }
     if (!formData.truck_id) { alert('Please select a truck'); return false; }
@@ -113,7 +178,7 @@ export default function TripsPage({ user, onLogout }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) { alert('Not authenticated. Please login again.'); return; }
 
-      const { error } = await supabase.from('trips').insert([{
+      const { data: tripData, error } = await supabase.from('trips').insert([{
         owner_id: authUser.id,
         driver_id: formData.driver_id,
         truck_id: formData.truck_id,
@@ -128,15 +193,25 @@ export default function TripsPage({ user, onLogout }) {
         expected_start_date: formData.start_date || null,
         expected_end_date: formData.end_date || null,
         notes: formData.notes,
-      }]);
+      }]).select().single();
 
       if (error) { alert(error.message); return; }
+
+      if (tripFiles.length > 0) {
+        try {
+          await uploadMultipleDocuments(tripFiles, tripData.id, 'trip');
+        } catch (uploadError) {
+          console.error('Error uploading documents:', uploadError);
+          alert('Trip created but some documents failed to upload');
+        }
+      }
 
       setFormData({
         driver_id: '', truck_id: '', origin: '', destination: '',
         customer: '', customer_phone: '', customer_email: '',
         freight_amount: '', start_date: '', end_date: '', notes: '',
       });
+      setTripFiles([]);
       setShowForm(false);
       fetchTrips();
       alert('Trip created successfully');
@@ -346,6 +421,36 @@ export default function TripsPage({ user, onLogout }) {
                   style={{ ...s.input, minHeight: 80, resize: 'vertical' }}
                 />
               </div>
+
+              <div style={{ ...s.formField, gridColumn: 'span 2' }}>
+                <label style={s.label}>Documents</label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  style={{ ...s.input, padding: 8, background: '#fff' }}
+                />
+                {tripFiles.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {tripFiles.map((file, index) => (
+                      <span key={index} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '4px 10px', borderRadius: 8,
+                        background: 'rgba(124,99,255,0.1)', fontSize: 12,
+                        color: '#7C63FF', fontFamily: "'Outfit', sans-serif"
+                      }}>
+                        <i className="ti ti-file" style={{ fontSize: 14 }} />
+                        {file.name}
+                        <button type="button" onClick={() => removeTripFile(index)} style={{
+                          background: 'none', border: 'none', color: '#7C63FF',
+                          cursor: 'pointer', padding: 0, fontSize: 16, lineHeight: 1
+                        }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={s.formActions}>
@@ -372,81 +477,178 @@ export default function TripsPage({ user, onLogout }) {
                   <th style={s.th}>Truck</th>
                   <th style={s.th}>Freight</th>
                   <th style={s.th}>Status</th>
+                  <th style={s.th}>Status</th>
+                  <th style={s.th}>Documents</th>
                   <th style={s.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {trips.map((trip) => (
-                  <tr key={trip.id} style={s.tr}>
-                    <td style={s.td}>{trip.origin} → {trip.destination}</td>
-                    <td style={s.td}>{trip.customer}</td>
-                    <td style={s.td}>{trip.drivers?.name || 'Unknown'}</td>
-                    <td style={s.td}>{trip.trucks?.truck_number || 'Unknown'}</td>
-                    <td style={s.td}>{formatCurrency(trip.freight_amount || 0)}</td>
-                    <td style={s.td}>
-                      <span style={{
-                        ...s.statusBadge,
-                        backgroundColor: `${getStatusColor(trip.status)}15`,
-                        color: getStatusColor(trip.status),
-                      }}>
-                        {trip.status?.replace('_', ' ')}
-                      </span>
-                    </td>
-             <td style={s.td}>
-                      <div style={s.actionButtons}>
-                        {trip.status === 'assigned' && (
-                          <button
-                            onClick={() => updateTripStatus(trip.id, 'loading')}
-                            style={{ ...s.actionBtn, backgroundColor: '#3B82F615', color: '#3B82F6' }}
-                          >
-                            Start Loading
-                          </button>
-                        )}
-                        {trip.status === 'loading' && (
-                          <button
-                            onClick={() => updateTripStatus(trip.id, 'in_transit')}
-                            style={{ ...s.actionBtn, backgroundColor: '#8B5CF615', color: '#8B5CF6' }}
-                          >
-                            Start Transit
-                          </button>
-                        )}
-                        {trip.status === 'in_transit' && (
-                          <button
-                            onClick={() => updateTripStatus(trip.id, 'unloading')}
-                            style={{ ...s.actionBtn, backgroundColor: '#EC489915', color: '#EC4899' }}
-                          >
-                            Start Unloading
-                          </button>
-                        )}
-                        {trip.status === 'unloading' && (
-                          <button
-                            onClick={() => updateTripStatus(trip.id, 'delivered')}
-                            style={{ ...s.actionBtn, backgroundColor: '#22C55E15', color: '#22C55E' }}
-                          >
-                            Mark Delivered
-                          </button>
-                        )}
-                        {trip.status === 'delivered' && trip.close_status !== true && (
-                          <button
-                            onClick={() => closeTrip(trip.id)}
-                            style={{ ...s.actionBtn, backgroundColor: '#F59E0B15', color: '#F59E0B' }}
-                          >
-                            Close Trip
-                          </button>
-                        )}
-                        {trip.status === 'pending_settlement' && (
-                          <span style={{
-                            ...s.actionBtn,
-                            backgroundColor: '#F59E0B15',
-                            color: '#F59E0B',
-                            cursor: 'default',
-                          }}>
-                            Awaiting Settlement
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                  <Fragment key={trip.id}>
+                    <tr
+                      onClick={() => toggleTripExpand(trip.id)}
+                      style={{ ...s.tr, cursor: 'pointer' }}
+                    >
+                      <td style={s.td}>{trip.origin} → {trip.destination}</td>
+                      <td style={s.td}>{trip.customer}</td>
+                      <td style={s.td}>{trip.drivers?.name || 'Unknown'}</td>
+                      <td style={s.td}>{trip.trucks?.truck_number || 'Unknown'}</td>
+                      <td style={s.td}>{formatCurrency(trip.freight_amount || 0)}</td>
+                      <td style={s.td}>
+                        <span style={{
+                          ...s.statusBadge,
+                          backgroundColor: `${getStatusColor(trip.status)}15`,
+                          color: getStatusColor(trip.status),
+                        }}>
+                          {trip.status?.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '4px 10px', borderRadius: 8,
+                          background: 'rgba(124,99,255,0.08)',
+                          fontSize: 12, color: '#7C63FF',
+                          fontFamily: "'Outfit', sans-serif",
+                        }} onClick={(e) => { e.stopPropagation(); toggleTripExpand(trip.id); }}>
+                          <i className="ti ti-file" style={{ fontSize: 14 }} />
+                          {tripDocuments[trip.id]?.length || 0}
+                        </span>
+                      </td>
+                      <td style={s.td}>
+                        <div style={s.actionButtons}>
+                          {trip.status === 'assigned' && (
+                            <button
+                              onClick={() => updateTripStatus(trip.id, 'loading')}
+                              style={{ ...s.actionBtn, backgroundColor: '#3B82F615', color: '#3B82F6' }}
+                            >
+                              Start Loading
+                            </button>
+                          )}
+                          {trip.status === 'loading' && (
+                            <button
+                              onClick={() => updateTripStatus(trip.id, 'in_transit')}
+                              style={{ ...s.actionBtn, backgroundColor: '#8B5CF615', color: '#8B5CF6' }}
+                            >
+                              Start Transit
+                            </button>
+                          )}
+                          {trip.status === 'in_transit' && (
+                            <button
+                              onClick={() => updateTripStatus(trip.id, 'unloading')}
+                              style={{ ...s.actionBtn, backgroundColor: '#EC489915', color: '#EC4899' }}
+                            >
+                              Start Unloading
+                            </button>
+                          )}
+                          {trip.status === 'unloading' && (
+                            <button
+                              onClick={() => updateTripStatus(trip.id, 'delivered')}
+                              style={{ ...s.actionBtn, backgroundColor: '#22C55E15', color: '#22C55E' }}
+                            >
+                              Mark Delivered
+                            </button>
+                          )}
+                          {trip.status === 'delivered' && trip.close_status !== true && (
+                            <button
+                              onClick={() => closeTrip(trip.id)}
+                              style={{ ...s.actionBtn, backgroundColor: '#F59E0B15', color: '#F59E0B' }}
+                            >
+                              Close Trip
+                            </button>
+                          )}
+                          {trip.status === 'pending_settlement' && (
+                            <span style={{
+                              ...s.actionBtn,
+                              backgroundColor: '#F59E0B15',
+                              color: '#F59E0B',
+                              cursor: 'default',
+                            }}>
+                              Awaiting Settlement
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedTripId === trip.id && (
+                      <tr style={s.expandedRow}>
+                        <td colSpan={8} style={{ padding: '16px 20px', background: '#FAFAFD' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <h4 style={{ margin: 0, fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, color: '#1A1A1F' }}>
+                              Documents
+                            </h4>
+                            <label style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '6px 12px', borderRadius: 8,
+                              background: '#7C63FF', color: '#fff',
+                              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              fontFamily: "'Outfit', sans-serif",
+                            }}>
+                              <i className="ti ti-upload" style={{ fontSize: 14 }} />
+                              Upload
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*,application/pdf"
+                                style={{ display: 'none' }}
+                                onChange={async (e) => {
+                                  const files = Array.from(e.target.files);
+                                  if (files.length === 0) return;
+                                  try {
+                                    await uploadMultipleDocuments(files, trip.id, 'trip');
+                                    fetchTripDocuments(trip.id);
+                                    alert('Documents uploaded successfully');
+                                  } catch (err) {
+                                    console.error('Error uploading documents:', err);
+                                    alert('Failed to upload documents');
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {(tripDocuments[trip.id] || []).length === 0 ? (
+                              <p style={{ margin: 0, fontSize: 13, color: 'rgba(20,20,30,0.45)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                No documents uploaded yet
+                              </p>
+                            ) : (
+                              (tripDocuments[trip.id] || []).map(doc => (
+                                <div key={doc.id} style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  padding: '10px 14px', borderRadius: 10,
+                                  background: '#fff', border: '1px solid rgba(20,20,30,0.06)',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                    <i className={getFileIcon(doc.file_type)} style={{ fontSize: 20, color: '#7C63FF' }} />
+                                    <div style={{ minWidth: 0 }}>
+                                      <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: "'Outfit', sans-serif", color: '#1A1A1F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {doc.file_name}
+                                      </p>
+                                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(20,20,30,0.4)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                        {formatFileSize(doc.metadata?.size || 0)} · {new Date(doc.created_at).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => handlePreviewDocument(doc.file_path, doc.file_name)} style={s.docPreviewBtn} title="Preview">
+                                      <i className="ti ti-eye" style={{ fontSize: 16 }} />
+                                    </button>
+                                    <button onClick={() => handleDownloadDocument(doc.file_path, doc.file_name)} style={s.docDownloadBtn} title="Download">
+                                      <i className="ti ti-download" style={{ fontSize: 16 }} />
+                                    </button>
+                                    <button onClick={() => handleDeleteDocument(doc.id, doc.file_path, trip.id)} style={s.docDeleteBtn} title="Delete" disabled={docLoading[doc.id]}>
+                                      <i className="ti ti-trash" style={{ fontSize: 16 }} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -583,5 +785,32 @@ const s = {
     padding: '6px 12px', borderRadius: 10, border: 'none',
     cursor: 'pointer', fontWeight: 600, fontSize: 12,
     fontFamily: "'Space Grotesk', sans-serif",
+  },
+  expandedRow: {
+    borderBottom: '1px solid rgba(20,20,30,0.05)',
+  },
+  docPreviewBtn: {
+    background: 'rgba(124,99,255,0.1)',
+    border: '1px solid rgba(124,99,255,0.2)',
+    color: '#7C63FF',
+    width: 32, height: 32, borderRadius: 8,
+    cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  docDownloadBtn: {
+    background: 'rgba(59,130,246,0.1)',
+    border: '1px solid rgba(59,130,246,0.2)',
+    color: '#3B82F6',
+    width: 32, height: 32, borderRadius: 8,
+    cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  docDeleteBtn: {
+    background: 'rgba(224,82,74,0.1)',
+    border: '1px solid rgba(224,82,74,0.2)',
+    color: '#E0524A',
+    width: 32, height: 32, borderRadius: 8,
+    cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center',
   },
 };
