@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('owner');
   const [loading, setLoading] = useState(false);
   const { user, login: authLogin, signup: authSignup, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -23,34 +25,36 @@ useEffect(() => {
     }
   }, [user, loading, router]);
 
- const signUp = async () => {
-  console.log("PAGE EMAIL =", email);
-  console.log("PAGE PASSWORD =", password);
+  const signUp = async () => {
+    if (!email.trim()) {
+      alert("Email empty");
+      return;
+    }
 
-  if (!email.trim()) {
-    alert("Email empty");
-    return;
-  }
+    if (!password.trim()) {
+      alert("Password empty");
+      return;
+    }
 
-  if (!password.trim()) {
-    alert("Password empty");
-    return;
-  }
+    if (!name.trim()) {
+      alert("Name empty");
+      return;
+    }
 
-  if (authLoading) return;
+    if (authLoading) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    await authSignup(email.trim(), password);
-    alert("Signup successful!");
-  } catch (error) {
-    console.error(error);
-    alert(error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      await authSignup(email.trim(), password, name.trim(), role);
+      alert("Signup successful!");
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   const login = async () => {
     if (authLoading) return;
     
@@ -104,6 +108,29 @@ useEffect(() => {
   onChange={(e) => setPassword(e.target.value)}
   style={s.input}
 />
+        </div>
+
+        <div style={s.field}>
+          <label style={s.label}>Name</label>
+          <input
+            type="text"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={s.input}
+          />
+        </div>
+
+        <div style={s.field}>
+          <label style={s.label}>I am a</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            style={s.input}
+          >
+            <option value="owner">Fleet Owner</option>
+            <option value="driver">Driver</option>
+          </select>
         </div>
 
         <button onClick={login} disabled={loading} style={s.primaryBtn}>

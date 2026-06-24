@@ -16,7 +16,32 @@ const NAV_ITEMS = [
   { id: 'reports',         label: 'Reports',       path: '/reports',          icon: 'ti ti-chart-bar' },
   { id: 'settings',        label: 'Settings',      path: '/settings',         icon: 'ti ti-settings' },
 ];
-
+const DRIVER_NAV_ITEMS = [
+  {
+    id: 'driver-home',
+    label: 'My Trip',
+    path: '/driver/home',
+    icon: 'ti ti-truck',
+  },
+  {
+    id: 'driver-expenses',
+    label: 'Expenses',
+    path: '/driver/expenses',
+    icon: 'ti ti-receipt',
+  },
+  {
+    id: 'driver-advances',
+    label: 'Advances',
+    path: '/driver/advances',
+    icon: 'ti ti-wallet',
+  },
+  {
+    id: 'driver-pay',
+    label: 'Pay',
+    path: '/driver/pay',
+    icon: 'ti ti-currency-rupee',
+  },
+];
 export default function ProtectedSidebar({ user, onLogout, isOpen, onClose, isMobile }) {
   const { userRole, loading, logout } = useAuth();
   const pathname = usePathname();
@@ -26,7 +51,10 @@ export default function ProtectedSidebar({ user, onLogout, isOpen, onClose, isMo
     try { await logout(); }
     catch (e) { console.error('Logout error:', e); }
   };
-
+const menuItems =
+  userRole === 'driver'
+    ? DRIVER_NAV_ITEMS
+    : NAV_ITEMS;
   return (
     <>
       <style>{`
@@ -71,7 +99,7 @@ export default function ProtectedSidebar({ user, onLogout, isOpen, onClose, isMo
 
         {/* Nav */}
         <nav style={s.nav}>
-          {NAV_ITEMS.map(item => {
+       {menuItems.map(item => {
             const active = pathname === item.path;
             return (
               <Link

@@ -30,39 +30,19 @@ export const AuthProvider = ({ children }) => {
         const user = session?.user;
         
         if (user) {
-          const { data: profile, error: profileError } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('role, name, phone, fleet_owner_id')
             .eq('id', user.id)
             .maybeSingle();
 
-          if (profileError && profileError.code !== 'PGRST116') {
-            // Create a default driver profile if it doesn't exist
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([
-                {
-                  id: user.id,
-                  email: user.email,
-                  role: 'driver',
-                  name: user.user_metadata?.name || 'Driver User',
-                  phone: user.user_metadata?.phone || '',
-                  fleet_owner_id: null,
-                },
-              ]);
-            
-            if (!insertError) {
-              setUserRole('driver');
-              setUser(user);
-            } else {
-              setError(insertError.message);
-              setUser(null);
-              setUserRole(null);
-            }
-          } else {
-            setUserRole(profile?.role || 'driver');
-            setUser(user);
-          }
+         if (profile) {
+  setUserRole(profile.role);
+  setUser(user);
+} else {
+  setUser(user);
+  setUserRole(null);
+}
         } else {
           setUser(null);
           setUserRole(null);
@@ -86,30 +66,13 @@ export const AuthProvider = ({ children }) => {
             .select('role, name, phone, fleet_owner_id')
             .eq('id', session.user.id)
             .maybeSingle();
-
-          if (profileError && profileError.code !== 'PGRST116') {
-            // Create a default driver profile if it doesn't exist
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert([
-                {
-                  id: session.user.id,
-                  email: session.user.email,
-                  role: 'driver',
-                  name: session.user.user_metadata?.name || 'Driver User',
-                  phone: session.user.user_metadata?.phone || '',
-                  fleet_owner_id: null,
-                },
-              ]);
-            
-            if (!insertError) {
-              setUserRole('driver');
-              setUser(session.user);
-            }
-          } else {
-            setUserRole(profile?.role || 'driver');
-            setUser(session.user);
-          }
+if (profile) {
+  setUserRole(profile.role);
+  setUser(session.user);
+} else {
+  setUser(session.user);
+  setUserRole(null);
+}
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setUserRole(null);
@@ -135,7 +98,19 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
       
-      router.push('/dashboard');
+    if (data?.user) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .maybeSingle();
+
+  if (profile?.role === 'driver') {
+    router.push('/driver/home');
+  } else {
+    router.push('/dashboard');
+  }
+}
       return data;
     } catch (err) {
       setError(err.message);
@@ -182,9 +157,11 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // Redirect to dashboard after successful signup
-      router.push('/dashboard');
-      
+      if (role === 'driver') {
+  router.push('/driver/home');
+} else {
+  router.push('/dashboard');
+}
       return data;
     } catch (err) {
       setError(err.message);

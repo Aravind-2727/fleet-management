@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FormatCurrency } from '../../lib/currency';
+import { formatCurrency } from '../../lib/currency';
 import { useAuth } from '../../lib/AuthContext';
 import { useRouter } from 'next/navigation';
+import { withRoleProtection } from '../../lib/withRoleProtection';
+import DashboardLayout from '../../dashboard/layout';
 
-export default function DriverHome() {
+function DriverHome() {
   const { user } = useAuth();
   const [assignedTrip, setAssignedTrip] = useState(null);
   const [nextRequiredStatus, setNextRequiredStatus] = useState(null);
@@ -45,20 +47,21 @@ export default function DriverHome() {
           .from('drivers')
           .select('id, owner_id, pay_type, salary_amount')
           .eq('profile_id', driverId)
-          .single();
-
+       .maybeSingle();
         if (driverError) {
           console.error('Driver fetch error:', driverError);
           return;
         }
 
-        // Assigned trip
+        // Active trip
         const { data: trip, error: tripError } = await supabase
           .from('trips')
           .select('id, status, origin, destination, customer, truck_name, start_location, end_location, created_at, owner_id')
           .eq('driver_id', driverId)
-          .eq('status', 'assigned')
-          .single();
+          .in('status', ['assigned', 'loading', 'in_transit', 'unloading'])
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
         if (!tripError && trip) {
           setAssignedTrip(trip);
@@ -131,18 +134,22 @@ export default function DriverHome() {
     return paidBy === 'driver_paid' ? '#22C55E' : '#3B82F6';
   };
 
-  if (loading) {
-    return (
+ if (loading) {
+  return (
+    <DashboardLayout>
       <div style={s.root}>
         <div style={s.center}>
-          <div style={s.spinnerRing}><div style={s.spinner} /></div>
+          <div style={s.spinnerRing}>
+            <div style={s.spinner} />
+          </div>
           <p style={s.muted}>Loading driver dashboard...</p>
         </div>
       </div>
-    );
-  }
-
-  return (
+    </DashboardLayout>
+  );
+}
+return (
+  <DashboardLayout>
     <div style={s.root}>
       <div style={s.header}>
         <div>
@@ -271,8 +278,9 @@ export default function DriverHome() {
             )}
           </div>
         </div>
-      </div>
+            </div>
     </div>
+  </DashboardLayout>
   );
 }
 
@@ -425,3 +433,5 @@ const s = {
     marginBottom: 8,
   },
 };
+
+export default withRoleProtection(DriverHome, '/driver/home');

@@ -1,14 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../app/lib/AuthContext';
 import ProtectedSidebar from './ProtectedSidebar';
 import Header from './Header';
 
 const MOBILE_BREAKPOINT = 768;
 
 export default function DashboardLayout({ children, user, onLogout }) {
+  const { userRole } = useAuth();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(false);
+
+  useEffect(() => {
+    if (userRole && userRole !== 'owner') {
+      router.push('/driver/home');
+    }
+  }, [userRole, router]);
 
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);

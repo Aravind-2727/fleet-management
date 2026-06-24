@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { canAccessRoute } from './roleGuard';
 
@@ -18,18 +19,29 @@ export const withRoleProtection = (WrappedComponent, requiredRoute) => {
       );
     }
 
-    if (!userRole) {
-      router.push('/dashboard');
-      return null;
-    }
+  
 
     const hasAccess = canAccessRoute(requiredRoute, userRole);
     
-    if (!hasAccess) {
-      router.push('/dashboard');
-      return null;
-    }
+   useEffect(() => {
+  if (!loading && !userRole) {
+    router.replace('/');
+  }
+}, [loading, userRole, router]);
 
+useEffect(() => {
+  if (!loading && userRole && !hasAccess) {
+    if (userRole === 'driver') {
+      router.replace('/driver/home');
+    } else {
+      router.replace('/dashboard');
+    }
+  }
+}, [loading, userRole, hasAccess, router]);
+
+if (!userRole || !hasAccess) {
+  return null;
+}
     return <WrappedComponent {...props} userRole={userRole} />;
   };
 };

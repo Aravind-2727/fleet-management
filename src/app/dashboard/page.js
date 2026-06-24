@@ -17,7 +17,7 @@ import NotificationPanel from '../../components/dashboard/NotificationPanel';
 import WelcomePanel from '../../components/dashboard/WelcomePanel';
 
 export default function Dashboard() {
-  const { user, loading } = useAuth();
+const { user, loading, userRole } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [expensesLoading, setExpensesLoading] = useState(true);
   const [drivers, setDrivers] = useState([]);
@@ -209,7 +209,11 @@ export default function Dashboard() {
     fetchNotifications();
     fetchAlertData();
   }, [user]);
-
+useEffect(() => {
+  if (userRole === 'driver') {
+    router.replace('/driver/home');
+  }
+}, [userRole, router]);
   if (loading) {
     return (
       <div style={s.center}>

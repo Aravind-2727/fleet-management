@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { useRouter } from 'next/navigation';
+import { withRoleProtection } from '../../lib/withRoleProtection';
 
-export default function MyTrip() {
+function MyTrip() {
   const { user } = useAuth();
   const [trip, setTrip] = useState(null);
   const [statusOptions] = useState(['assigned', 'loading', 'in_transit', 'unloading', 'delivered']);
@@ -39,8 +40,10 @@ export default function MyTrip() {
           .from('trips')
           .select('id, status, origin, destination, customer, truck_name, start_location, end_location, created_at, owner_id, driver_id')
           .eq('driver_id', driverId)
-          .eq('status', 'assigned')
-          .single();
+          .in('status', ['assigned', 'loading', 'in_transit', 'unloading'])
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
           console.error('Trip fetch error:', error);
@@ -330,3 +333,5 @@ const s = {
     fontSize: 13, color: '#16A34A', marginBottom: 12,
   },
 };
+
+export default withRoleProtection(MyTrip, '/driver/mytrip');
