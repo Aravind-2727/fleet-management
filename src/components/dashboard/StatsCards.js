@@ -1,8 +1,24 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 export default function StatsCards() {
+  const [columns, setColumns] = useState(4);
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w < 480) setColumns(1);
+      else if (w < 768) setColumns(2);
+      else if (w < 1024) setColumns(3);
+      else setColumns(4);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   return (
-    <div style={s.statGrid} className="dash-stat-grid">
+    <div style={{ ...s.statGrid, gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
       <div style={s.statCard}>
         <div style={{ ...s.statIcon, ...s.statIconTruck }}>
           <i className="ti ti-truck" style={{ fontSize: 20 }} />

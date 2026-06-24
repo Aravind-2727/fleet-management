@@ -204,12 +204,12 @@ const s = {
   shell: {
     maxWidth: 1200,
     margin: '0 auto',
-    padding: 28,
+    padding: 20,
     boxSizing: 'border-box',
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20, flexWrap: 'wrap', gap: 12,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -218,28 +218,28 @@ const s = {
   },
   headerTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5,
+    fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: -0.5,
   },
   reportsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
-    gap: 16,
-    marginBottom: 32,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: 14,
+    marginBottom: 24,
   },
   reportCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    padding: '20px 16px',
+    borderRadius: 16,
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: 14,
+    gap: 12,
   },
   reportIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     border: '1px solid',
     display: 'flex',
     alignItems: 'center',
@@ -252,12 +252,12 @@ const s = {
   },
   reportTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 13, fontWeight: 600, color: 'rgba(20,20,30,0.55)', margin: '0 0 6px',
+    fontSize: 12, fontWeight: 600, color: 'rgba(20,20,30,0.55)', margin: '0 0 4px',
     textTransform: 'uppercase', letterSpacing: 0.4,
   },
   reportValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 22, fontWeight: 700, color: '#1A1A1F', margin: '0 0 4px',
+    fontSize: 20, fontWeight: 700, color: '#1A1A1F', margin: '0 0 4px',
     letterSpacing: -0.5,
   },
   reportCount: {
@@ -269,29 +269,29 @@ const s = {
   },
   sectionTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 20, fontWeight: 600, color: '#1A1A1F', marginBottom: 16,
+    fontSize: 18, fontWeight: 600, color: '#1A1A1F', margin: '0 0 14px',
   },
   financialGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 16,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: 14,
   },
   financialCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
   },
   financialHeader: {
     display: 'flex', alignItems: 'center', gap: 10,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   financialTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 15, fontWeight: 600, color: '#1A1A1F', margin: 0,
+    fontSize: 14, fontWeight: 600, color: '#1A1A1F', margin: 0,
   },
   financialValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 28, fontWeight: 700, color: '#1A1A1F', letterSpacing: -0.5,
+    fontSize: 24, fontWeight: 700, color: '#1A1A1F', letterSpacing: -0.5,
   },
 };

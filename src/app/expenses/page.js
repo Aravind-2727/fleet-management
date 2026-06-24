@@ -576,7 +576,7 @@ export default function ExpensesPage({ user, onLogout }) {
                         <select
                           value={expense.status}
                           onChange={(e) => updateExpenseStatus(expense.id, e.target.value)}
-                          style={{ ...s.statusSelect, backgroundColor: getStatusColor(expense.status) }}
+                          style={{ ...s.statusSelect, backgroundColor: getStatusColor(expense.status), color: '#fff' }}
                         >
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
@@ -719,12 +719,12 @@ const s = {
   shell: {
     maxWidth: 1200,
     margin: '0 auto',
-    padding: 28,
+    padding: 20,
     boxSizing: 'border-box',
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 24, flexWrap: 'wrap', gap: 16,
+    marginBottom: 20, flexWrap: 'wrap', gap: 12,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -742,40 +742,42 @@ const s = {
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
+    whiteSpace: 'nowrap', minHeight: 44,
   },
   summaryGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 16,
-    marginBottom: 24,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: 14,
+    marginBottom: 20,
   },
   summaryCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     display: 'flex',
     alignItems: 'center',
-    gap: 16,
+    gap: 14,
   },
   summaryIcon: {
-    width: 48, height: 48, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 12,
     background: 'rgba(124,99,255,0.1)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
   summaryLabel: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
-    color: 'rgba(20,20,30,0.4)', margin: '0 0 6px',
+    color: 'rgba(20,20,30,0.4)', margin: '0 0 4px',
   },
   summaryValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 20, fontWeight: 700, margin: 0, color: '#1A1A1F',
+    fontSize: 18, fontWeight: 700, margin: 0, color: '#1A1A1F',
   },
   formCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, padding: 24,
+    borderRadius: 18, padding: 20,
     marginBottom: 20, position: 'relative', overflow: 'hidden',
     boxSizing: 'border-box',
   },
@@ -785,12 +787,12 @@ const s = {
   },
   formTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 16, fontWeight: 600, margin: '0 0 18px',
+    fontSize: 16, fontWeight: 600, margin: '0 0 16px',
   },
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 16, marginBottom: 20,
+    gap: 14, marginBottom: 20,
   },
   formField: { marginBottom: 14 },
   label: {
@@ -810,20 +812,21 @@ const s = {
     color: '#1A1A1F',
     boxSizing: 'border-box',
     transition: 'all 0.15s',
+    minHeight: 44,
   },
-  formActions: { display: 'flex', gap: 10, marginTop: 6 },
+  formActions: { display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' },
   saveBtn: {
     background: '#22C55E', color: '#fff', border: 'none',
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 44,
   },
   cancelBtn: {
     background: '#fff', color: 'rgba(20,20,30,0.5)',
     border: '1px solid rgba(20,20,30,0.1)',
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 44,
   },
   empty: {
     background: '#fff',
@@ -836,27 +839,27 @@ const s = {
   tableCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, overflow: 'hidden',
+    borderRadius: 18, overflow: 'auto',
+    WebkitOverflowScrolling: 'touch',
   },
-  table: { width: '100%', borderCollapse: 'collapse' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: 800 },
   th: {
     textAlign: 'left',
-    padding: '14px 20px',
+    padding: '12px 16px',
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
     color: 'rgba(20,20,30,0.4)',
     borderBottom: '1px solid rgba(20,20,30,0.07)',
+    whiteSpace: 'nowrap',
   },
   tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
-  td: { padding: '14px 20px', fontSize: 14, fontFamily: "'Outfit', sans-serif" },
+  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' },
   statusSelect: {
     border: 'none', borderRadius: 20,
     padding: '4px 12px', fontSize: 12, fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
-    color: '#fff', cursor: 'pointer', appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 8px center',
+    cursor: 'pointer', appearance: 'none',
+    minHeight: 28,
     paddingRight: 32,
   },
   deleteBtn: {
@@ -865,13 +868,14 @@ const s = {
     color: '#E0524A',
     padding: '7px 16px', borderRadius: 10,
     cursor: 'pointer', fontWeight: 600, fontSize: 13,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 34,
   },
   paidByBadge: {
     display: 'inline-block',
     padding: '4px 12px', borderRadius: 20,
     fontSize: 12, fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
+    whiteSpace: 'nowrap',
   },
   expandedRow: {
     borderBottom: '1px solid rgba(20,20,30,0.05)',

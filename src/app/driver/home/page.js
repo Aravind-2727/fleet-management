@@ -282,7 +282,7 @@ const s = {
     background: '#F7F7FA',
     minHeight: '100vh',
     color: '#1A1A1F',
-    padding: 24,
+    padding: 16,
     boxSizing: 'border-box',
   },
   center: {
@@ -305,7 +305,7 @@ const s = {
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -314,49 +314,45 @@ const s = {
   },
   headerTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5,
+    fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: -0.5,
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: 24,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: 16,
   },
   card: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     boxShadow: '0 2px 8px rgba(20,20,30,0.06)',
     transition: 'all 0.2s',
-    ':hover': {
-      boxShadow: '0 4px 16px rgba(20,20,30,0.1)',
-      transform: 'translateY(-2px)',
-    },
   },
   cardHeader: {
-    display: 'flex', alignItems: 'flex-start', gap: 16,
-    marginBottom: 20,
+    display: 'flex', alignItems: 'flex-start', gap: 14,
+    marginBottom: 16,
   },
   iconContainer: {
-    width: 56, height: 56, borderRadius: 14,
+    width: 48, height: 48, borderRadius: 12,
     border: '1px solid',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
   cardTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 18, fontWeight: 600, color: '#1A1A1F', margin: 0,
+    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: 0,
   },
-  cardContent: {
-    // Content styles
-  },
+  cardContent: {},
   cardText: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 14, color: 'rgba(20,20,30,0.7)', margin: '8px 0',
+    wordBreak: 'break-word',
   },
   emptyText: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 14, color: 'rgba(20,20,30,0.45)', fontStyle: 'italic',
-    textAlign: 'center', padding: 20,
+    textAlign: 'center', padding: 16,
   },
   actionButton: {
     background: '#7C63FF',
@@ -369,6 +365,7 @@ const s = {
     fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 4px 12px rgba(124,99,255,0.25)',
+    minHeight: 44,
   },
   statusBadge: {
     display: 'inline-block',
@@ -378,6 +375,7 @@ const s = {
     fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
     textTransform: 'capitalize',
+    whiteSpace: 'nowrap',
   },
   expenseList: {
     listStyle: 'none',
@@ -385,7 +383,7 @@ const s = {
     margin: 0,
   },
   expenseItem: {
-    padding: 12,
+    padding: 10,
     borderBottom: '1px solid rgba(20,20,30,0.05)',
     ':last-child': {
       borderBottom: 'none',
@@ -404,13 +402,16 @@ const s = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   paidByBadge: {
     padding: '2px 8px',
     borderRadius: 16,
     fontSize: 11,
     fontWeight: 600,
+    whiteSpace: 'nowrap',
   },
   expenseDate: {
     fontSize: 12,
@@ -418,7 +419,7 @@ const s = {
   },
   payableAmount: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 700,
     color: '#1A1A1F',
     marginBottom: 8,

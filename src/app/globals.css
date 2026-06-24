@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
+/* ── Brand tokens ──────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F7F7FA;
+  --foreground: #1A1A1F;
+
+  --font-primary: 'Outfit', sans-serif;
+  --font-ui:      'Space Grotesk', sans-serif;
+
+  --accent:       #7C63FF;
+  --accent-light: rgba(124, 99, 255, 0.1);
+  --danger:       #E0524A;
+  --success:      #22C55E;
+  --warning:      #FB923C;
+  --info:         #3B82F6;
+
+  --border:       rgba(20, 20, 30, 0.07);
+  --muted:        rgba(20, 20, 30, 0.4);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── No dark mode auto-flip (dashboard is light-only) ─── */
+/* Remove the prefers-color-scheme block entirely          */
+
+/* ── Base reset ────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  height: 100%;                       /* fixes 100vh on mobile Safari */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
+
+/* ── Form elements inherit font ────────────────────────── */
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ── Media — only constrain width, not height globally ─── */
+img, svg, video, canvas {
+  max-width: 100%;
+  display: block;          /* removes inline baseline gap */
+}
+
+/* ── Scrollbar (matches your component styles) ─────────── */
+::-webkit-scrollbar       { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Animations (shared across dashboard) ──────────────── */
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }

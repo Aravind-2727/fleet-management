@@ -164,7 +164,7 @@ const s = {
     background: '#fff',
     borderRadius: 24,
     border: '1px solid rgba(20,20,30,0.07)',
-    padding: 36,
+    padding: 24,
     boxSizing: 'border-box',
     overflow: 'hidden',
   },

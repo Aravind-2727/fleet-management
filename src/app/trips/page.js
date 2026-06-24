@@ -686,11 +686,11 @@ const s = {
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
   shell: {
-    maxWidth: 1200, margin: '0 auto', padding: 28, boxSizing: 'border-box',
+    maxWidth: 1200, margin: '0 auto', padding: 20, boxSizing: 'border-box',
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 24, flexWrap: 'wrap', gap: 16,
+    marginBottom: 20, flexWrap: 'wrap', gap: 12,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -708,10 +708,11 @@ const s = {
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
+    whiteSpace: 'nowrap', minHeight: 44,
   },
   formCard: {
     background: '#fff', border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, padding: 24, marginBottom: 20,
+    borderRadius: 18, padding: 20, marginBottom: 20,
     position: 'relative', overflow: 'hidden', boxSizing: 'border-box',
   },
   shimmer: {
@@ -725,7 +726,7 @@ const s = {
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 16, marginBottom: 20,
+    gap: 14, marginBottom: 20,
   },
   formField: { marginBottom: 14 },
   label: {
@@ -738,20 +739,21 @@ const s = {
     border: '1px solid rgba(20,20,30,0.1)', background: '#F7F7FA',
     fontSize: 14, fontFamily: "'Outfit', sans-serif",
     color: '#1A1A1F', boxSizing: 'border-box', transition: 'all 0.15s',
+    minHeight: 44,
   },
-  formActions: { display: 'flex', gap: 10, marginTop: 6 },
+  formActions: { display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' },
   saveBtn: {
     background: '#22C55E', color: '#fff', border: 'none',
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 44,
   },
   cancelBtn: {
     background: '#fff', color: 'rgba(20,20,30,0.5)',
     border: '1px solid rgba(20,20,30,0.1)',
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 44,
   },
   empty: {
     background: '#fff', border: '1px solid rgba(20,20,30,0.07)',
@@ -763,28 +765,31 @@ const s = {
   },
   tableCard: {
     background: '#fff', border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, overflow: 'hidden',
+    borderRadius: 18, overflow: 'auto',
+    WebkitOverflowScrolling: 'touch',
   },
-  table: { width: '100%', borderCollapse: 'collapse' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: 800 },
   th: {
-    textAlign: 'left', padding: '14px 20px',
+    textAlign: 'left', padding: '12px 16px',
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
     color: 'rgba(20,20,30,0.4)',
     borderBottom: '1px solid rgba(20,20,30,0.07)',
+    whiteSpace: 'nowrap',
   },
   tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
-  td: { padding: '14px 20px', fontSize: 14, fontFamily: "'Outfit', sans-serif" },
+  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' },
   statusBadge: {
     display: 'inline-block', padding: '4px 12px', borderRadius: 20,
     fontSize: 12, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif",
-    textTransform: 'capitalize',
+    textTransform: 'capitalize', whiteSpace: 'nowrap',
   },
-  actionButtons: { display: 'flex', gap: 8, justifyContent: 'flex-start' },
+  actionButtons: { display: 'flex', gap: 8, flexWrap: 'wrap' },
   actionBtn: {
     padding: '6px 12px', borderRadius: 10, border: 'none',
     cursor: 'pointer', fontWeight: 600, fontSize: 12,
-    fontFamily: "'Space Grotesk', sans-serif",
+    fontFamily: "'Space Grotesk', sans-serif", whiteSpace: 'nowrap',
+    minHeight: 32,
   },
   expandedRow: {
     borderBottom: '1px solid rgba(20,20,30,0.05)',

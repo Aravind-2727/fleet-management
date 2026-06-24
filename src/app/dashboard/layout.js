@@ -1,12 +1,28 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import ProtectedSidebar from '../../components/dashboard/ProtectedSidebar';
 import Header from '../../components/dashboard/Header';
 import { useAuth } from '../../app/lib/AuthContext';
-import { usePathname } from 'next/navigation';
+
+const BREAKPOINT = 768;
+
 export default function DashboardLayout({ children }) {
   const { user, loading } = useAuth();
-const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile]       = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${BREAKPOINT}px)`);
+    const handler = (e) => {
+      setIsMobile(e.matches);
+      if (!e.matches) setSidebarOpen(false);
+    };
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   if (loading) {
     return (
       <div style={s.loadingContainer}>
@@ -20,26 +36,37 @@ const pathname = usePathname();
 
   return (
     <div style={s.root}>
+
+      {/* Backdrop — rendered at root level so it covers everything */}
+      {isMobile && sidebarOpen && (
+        <div
+          style={s.backdrop}
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* shell = sidebar + main as flex siblings — fixes the overlap */}
       <div style={s.shell}>
-       <ProtectedSidebar user={user} currentPath={pathname} />
+
+        <ProtectedSidebar
+          user={user}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          isMobile={isMobile}
+        />
+
         <main style={s.main}>
-          <Header user={user} />
+          <Header
+            user={user}
+            onMenuClick={() => setSidebarOpen(o => !o)}
+            isMobile={isMobile}
+          />
           {children}
         </main>
-      </div>
-      <Styles />
-    </div>
-  );
-}
 
-function Styles() {
-  return (
-    <style>{`
-      @keyframes spin { to { transform: rotate(360deg); } }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(20,20,30,0.1); border-radius: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-    `}</style>
+      </div>
+    </div>
   );
 }
 
@@ -49,20 +76,23 @@ const s = {
     background: '#F7F7FA',
     minHeight: '100vh',
     color: '#1A1A1F',
+    position: 'relative',   // backdrop positions relative to this
   },
   shell: {
-    display: 'flex',
+    display: 'flex',        // sidebar + main are flex siblings here
     minHeight: '100vh',
   },
   main: {
     flex: 1,
-    minWidth: 0,
-    padding: 28,
+    minWidth: 0,            // prevents flex child overflow blowout
+    padding: 24,
     boxSizing: 'border-box',
     overflowX: 'hidden',
+    // removed maxWidth/margin:auto — conflicts with sidebar flex layout
   },
   loadingContainer: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
     minHeight: '100vh', gap: 16,
   },
   spinnerRing: {
@@ -79,5 +109,12 @@ const s = {
   muted: {
     fontFamily: "'Space Grotesk', sans-serif",
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
+  },
+  backdrop: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(20,20,30,0.45)',
+    zIndex: 299,            // below sidebar z-index 300, above everything else
+    animation: 'fadeIn 0.2s ease-out',
   },
 };

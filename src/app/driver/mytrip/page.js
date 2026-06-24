@@ -214,12 +214,12 @@ const s = {
     background: '#F7F7FA',
     minHeight: '100vh',
     color: '#1A1A1F',
-    padding: 24,
+    padding: 16,
     boxSizing: 'border-box',
   },
   center: {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    minHeight: '100vh', gap: 16,
+    minHeight: '100vh', gap: 16, padding: 16, textAlign: 'center',
   },
   spinnerRing: {
     width: 56, height: 56, borderRadius: '50%',
@@ -237,7 +237,7 @@ const s = {
     color: 'rgba(20,20,30,0.45)', fontSize: 13,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -246,40 +246,39 @@ const s = {
   },
   headerTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5,
+    fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: -0.5,
   },
   card: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     boxShadow: '0 2px 8px rgba(20,20,30,0.06)',
   },
   cardHeader: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20, flexWrap: 'wrap', gap: 12,
   },
   cardTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 20, fontWeight: 600, color: '#1A1A1F', margin: 0,
+    fontSize: 18, fontWeight: 600, color: '#1A1A1F', margin: 0,
   },
-  cardContent: {
-    // Content styles
-  },
+  cardContent: {},
   detailsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: 24,
-    marginBottom: 32,
+    gap: 16,
+    marginBottom: 24,
   },
   detailLabel: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase',
-    color: 'rgba(20,20,30,0.4)', margin: '0 0 8px',
+    color: 'rgba(20,20,30,0.4)', margin: '0 0 6px',
   },
   detailValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 16, fontWeight: 500, color: '#1A1A1F',
+    fontSize: 15, fontWeight: 500, color: '#1A1A1F', margin: 0,
+    wordBreak: 'break-word',
   },
   statusBadge: {
     display: 'inline-block',
@@ -289,21 +288,22 @@ const s = {
     fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
     textTransform: 'capitalize',
+    whiteSpace: 'nowrap',
   },
   actionSection: {
     background: 'rgba(124,99,255,0.05)',
     border: '1px solid rgba(124,99,255,0.1)',
     borderRadius: 12,
-    padding: 20,
-    marginTop: 24,
+    padding: 16,
+    marginTop: 20,
   },
   actionTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: '0 0 8px',
+    fontSize: 15, fontWeight: 600, color: '#1A1A1F', margin: '0 0 6px',
   },
   actionText: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 14, color: 'rgba(20,20,30,0.7)', margin: '0 0 16px',
+    fontSize: 13, color: 'rgba(20,20,30,0.7)', margin: '0 0 14px',
   },
   updateButton: {
     background: '#7C63FF',
@@ -316,20 +316,17 @@ const s = {
     fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 4px 12px rgba(124,99,255,0.25)',
-    ':disabled': {
-      opacity: 0.6,
-      cursor: 'not-allowed',
-    },
+    minHeight: 44,
   },
   completedSection: {
     textAlign: 'center',
-    padding: 20,
+    padding: 16,
     background: 'rgba(34,197,94,0.05)',
     border: '1px solid rgba(34,197,94,0.1)',
     borderRadius: 12,
   },
   completedText: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 14, color: '#16A34A', marginBottom: 16,
+    fontSize: 13, color: '#16A34A', marginBottom: 12,
   },
 };

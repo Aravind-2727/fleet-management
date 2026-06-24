@@ -237,12 +237,12 @@ const s = {
   shell: {
     maxWidth: 1200,
     margin: '0 auto',
-    padding: 28,
+    padding: 20,
     boxSizing: 'border-box',
   },
   header: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 24, flexWrap: 'wrap', gap: 16,
+    marginBottom: 20, flexWrap: 'wrap', gap: 12,
   },
   headerSub: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -260,11 +260,12 @@ const s = {
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
     boxShadow: '0 8px 20px rgba(124,99,255,0.25)',
+    whiteSpace: 'nowrap', minHeight: 44,
   },
   formCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
-    borderRadius: 18, padding: 24,
+    borderRadius: 18, padding: 20,
     marginBottom: 20, position: 'relative', overflow: 'hidden',
     boxSizing: 'border-box',
   },
@@ -274,12 +275,12 @@ const s = {
   },
   formTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 16, fontWeight: 600, margin: '0 0 18px',
+    fontSize: 16, fontWeight: 600, margin: '0 0 16px',
   },
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 16,
+    gap: 14,
     marginBottom: 20,
   },
   formField: {
@@ -302,22 +303,23 @@ const s = {
     color: '#1A1A1F',
     boxSizing: 'border-box',
     transition: 'all 0.15s',
+    minHeight: 44,
   },
   formActions: {
-    display: 'flex', gap: 10, marginTop: 6,
+    display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap',
   },
   saveBtn: {
     background: '#22C55E', color: '#fff', border: 'none',
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 44,
   },
   cancelBtn: {
     background: '#fff', color: 'rgba(20,20,30,0.5)',
     border: '1px solid rgba(20,20,30,0.1)',
     padding: '11px 22px', borderRadius: 12,
     cursor: 'pointer', fontWeight: 600, fontSize: 14,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 44,
   },
   empty: {
     background: '#fff',
@@ -331,27 +333,31 @@ const s = {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
     borderRadius: 18,
-    overflow: 'hidden',
+    overflow: 'auto',
+    WebkitOverflowScrolling: 'touch',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
+    minWidth: 500,
   },
   th: {
     textAlign: 'left',
-    padding: '14px 20px',
+    padding: '12px 16px',
     fontFamily: "'Space Grotesk', sans-serif",
     fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase',
     color: 'rgba(20,20,30,0.4)',
     borderBottom: '1px solid rgba(20,20,30,0.07)',
+    whiteSpace: 'nowrap',
   },
   tr: {
     borderBottom: '1px solid rgba(20,20,30,0.05)',
   },
   td: {
-    padding: '14px 20px',
+    padding: '12px 16px',
     fontSize: 14,
     fontFamily: "'Outfit', sans-serif",
+    whiteSpace: 'nowrap',
   },
   statusBadge: {
     display: 'inline-block',
@@ -360,6 +366,7 @@ const s = {
     fontSize: 12,
     fontWeight: 600,
     fontFamily: "'Space Grotesk', sans-serif",
+    whiteSpace: 'nowrap',
   },
   deleteBtn: {
     background: 'rgba(224,82,74,0.1)',
@@ -367,6 +374,6 @@ const s = {
     color: '#E0524A',
     padding: '7px 16px', borderRadius: 10,
     cursor: 'pointer', fontWeight: 600, fontSize: 13,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Outfit', sans-serif", minHeight: 34,
   },
 };
