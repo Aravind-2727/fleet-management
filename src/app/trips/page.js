@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/currency';
 import { uploadMultipleDocuments, getDocuments, createSignedUrl, downloadDocument, deleteDocument, getFileIcon, formatFileSize } from '../lib/documents';
 import DashboardLayout from '../../components/dashboard/layout';
+import Modal from '../../components/common/Modal';
 
 export default function TripsPage({ user, onLogout }) {
   const [trips, setTrips] = useState([]);
@@ -293,7 +294,7 @@ export default function TripsPage({ user, onLogout }) {
         </div>
 
         {/* Create Trip Form */}
-        {showForm && (
+        <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Create New Trip</h3>
@@ -458,7 +459,7 @@ export default function TripsPage({ user, onLogout }) {
               <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Trips Table */}
         {trips.length === 0 ? (

@@ -1,5 +1,7 @@
 'use client';
 
+import Modal from '../common/Modal';
+
 export default function AdvanceForm({
   showForm,
   setShowForm,
@@ -13,57 +15,57 @@ export default function AdvanceForm({
   formLoading,
   saveAdvance,
 }) {
-  if (!showForm) return null;
-
   return (
-    <div style={s.formCard}>
-      <div style={s.shimmer} />
-      <h3 style={s.formTitle}>Create New Advance Request</h3>
+    <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
+      <div style={s.formCard}>
+        <div style={s.shimmer} />
+        <h3 style={s.formTitle}>Create New Advance Request</h3>
 
-      <div style={s.field}>
-        <label style={s.label}>Driver</label>
-        <select
-          value={driverId}
-          onChange={(e) => setDriverId(e.target.value)}
-          style={s.input}
-        >
-          <option value="">Select Driver</option>
-          {drivers.map((driver) => (
-            <option key={driver.id} value={driver.id}>
-              {driver.profiles?.name}
-            </option>
-          ))}
-        </select>
-      </div>
+        <div style={s.field}>
+          <label style={s.label}>Driver</label>
+          <select
+            value={driverId}
+            onChange={(e) => setDriverId(e.target.value)}
+            style={s.input}
+          >
+            <option value="">Select Driver</option>
+            {drivers.map((driver) => (
+              <option key={driver.id} value={driver.id}>
+                {driver.profiles?.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div style={s.field}>
-        <label style={s.label}>Amount (₹)</label>
-        <input
-          type="number"
-          placeholder="e.g. 500"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          style={s.input}
-        />
-      </div>
+        <div style={s.field}>
+          <label style={s.label}>Amount (₹)</label>
+          <input
+            type="number"
+            placeholder="e.g. 500"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            style={s.input}
+          />
+        </div>
 
-      <div style={s.field}>
-        <label style={s.label}>Reason</label>
-        <input
-          placeholder="e.g. Emergency travel"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          style={s.input}
-        />
-      </div>
+        <div style={s.field}>
+          <label style={s.label}>Reason</label>
+          <input
+            placeholder="e.g. Emergency travel"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            style={s.input}
+          />
+        </div>
 
-      <div style={s.formActions}>
-        <button onClick={saveAdvance} style={s.saveBtn} disabled={formLoading}>
-          {formLoading ? 'Creating...' : 'Create Advance'}
-        </button>
-        <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
+        <div style={s.formActions}>
+          <button onClick={saveAdvance} style={s.saveBtn} disabled={formLoading}>
+            {formLoading ? 'Creating...' : 'Create Advance'}
+          </button>
+          <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
+        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

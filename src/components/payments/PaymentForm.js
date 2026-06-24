@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
 import { formatCurrency } from '../../app/lib/currency';
+import Modal from '../common/Modal';
 
 function PaymentFormInner({
   trips,
@@ -22,7 +23,6 @@ function PaymentFormInner({
       <div style={s.shimmer} />
       <h3 style={s.formTitle}>Record New Payment</h3>
 
-      {/* Trip Dropdown only */}
       <div style={s.field}>
         <label style={s.label}>Trip</label>
         <select
@@ -105,16 +105,16 @@ export default function PaymentForm({
   formLoading,
   savePayment,
 }) {
-  if (!showForm) return null;
-
   return (
-    <PaymentFormInner
-      trips={trips}
-      payments={payments}
-      formLoading={formLoading}
-      savePayment={savePayment}
-      setShowForm={setShowForm}
-    />
+    <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
+      <PaymentFormInner
+        trips={trips}
+        payments={payments}
+        formLoading={formLoading}
+        savePayment={savePayment}
+        setShowForm={setShowForm}
+      />
+    </Modal>
   );
 }
 
@@ -123,7 +123,7 @@ const s = {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
     borderRadius: 18, padding: 24,
-    marginBottom: 20, position: 'relative', overflow: 'hidden',
+    position: 'relative', overflow: 'hidden',
     boxSizing: 'border-box',
   },
   shimmer: {

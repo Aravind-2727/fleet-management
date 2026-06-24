@@ -4,6 +4,7 @@ import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../lib/supabase';
 import { uploadMultipleDocuments, getDocuments, createSignedUrl, downloadDocument, deleteDocument, getFileIcon, formatFileSize } from '../lib/documents';
 import DashboardLayout from '../../components/dashboard/layout';
+import Modal from '../../components/common/Modal';
 
 export default function SettlementsPage({ user, onLogout }) {
   const [settlements, setSettlements] = useState([]);
@@ -413,7 +414,7 @@ export default function SettlementsPage({ user, onLogout }) {
         </div>
 
         {/* Form */}
-        {showForm && (
+        <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Create New Settlement</h3>
@@ -528,7 +529,7 @@ export default function SettlementsPage({ user, onLogout }) {
               <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Table */}
         {settlements.length === 0 ? (

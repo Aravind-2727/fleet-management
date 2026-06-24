@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/currency';
 import DashboardLayout from '../../components/dashboard/layout';
+import Modal from '../../components/common/Modal';
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -186,7 +187,7 @@ export default function TripsManagementPage({ user, onLogout }) {
         </div>
 
         {/* Form */}
-        {showForm && (
+        <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Create New Trip</h3>
@@ -253,7 +254,7 @@ export default function TripsManagementPage({ user, onLogout }) {
               <button onClick={() => setShowForm(false)} style={s.cancelBtn} disabled={formLoading}>Cancel</button>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Table */}
         {trips.length === 0 ? (

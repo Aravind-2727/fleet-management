@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../app/lib/supabase';
+import Modal from '../common/Modal';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('en-IN', {
@@ -16,7 +17,7 @@ function SettlementFormInner({
   settlements,
   formLoading,
   saveSettlement,
-    setShowForm,
+  setShowForm,
 }) {
   const [driverId, setDriverId] = useState('');
   const [tripId, setTripId] = useState('');
@@ -183,18 +184,18 @@ export default function SettlementForm({
   formLoading,
   saveSettlement,
 }) {
-  if (!showForm) return null;
-
- return (
-  <SettlementFormInner
-    drivers={drivers}
-    trips={trips}
-    settlements={settlements}
-    formLoading={formLoading}
-    saveSettlement={saveSettlement}
-    setShowForm={setShowForm}
-  />
-);
+  return (
+    <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
+      <SettlementFormInner
+        drivers={drivers}
+        trips={trips}
+        settlements={settlements}
+        formLoading={formLoading}
+        saveSettlement={saveSettlement}
+        setShowForm={setShowForm}
+      />
+    </Modal>
+  );
 }
 
 const s = {
@@ -202,7 +203,7 @@ const s = {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
     borderRadius: 18, padding: 24,
-    marginBottom: 20, position: 'relative', overflow: 'hidden',
+    position: 'relative', overflow: 'hidden',
     boxSizing: 'border-box',
   },
   shimmer: {

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../lib/currency';
 import { uploadMultipleDocuments, getDocuments, createSignedUrl, downloadDocument, deleteDocument, getFileIcon, formatFileSize } from '../lib/documents';
 import DashboardLayout from '../../components/dashboard/layout';
+import Modal from '../../components/common/Modal';
 
 export default function ExpensesPage({ user, onLogout }) {
   const [expenses, setExpenses] = useState([]);
@@ -410,7 +411,7 @@ export default function ExpensesPage({ user, onLogout }) {
         </div>
 
         {/* Add Form */}
-        {showForm && (
+        <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add New Expense</h3>
@@ -532,7 +533,7 @@ export default function ExpensesPage({ user, onLogout }) {
               </button>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Table */}
         {expenses.length === 0 ? (

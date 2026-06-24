@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
+import Modal from '../../components/common/Modal';
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('en-IN', {
@@ -218,7 +219,7 @@ export default function AdvancesPage({ user, onLogout }) {
         </div>
 
         {/* Add Form */}
-        {showForm && (
+        <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add Advance Request</h3>
@@ -263,7 +264,7 @@ export default function AdvancesPage({ user, onLogout }) {
               <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Table */}
         {advances.length === 0 ? (

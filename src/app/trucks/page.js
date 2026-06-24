@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import DashboardLayout from '../../components/dashboard/layout';
+import Modal from '../../components/common/Modal';
 
 export default function TrucksPage({ user, onLogout }) {
   const [trucks, setTrucks] = useState([]);
@@ -134,7 +135,7 @@ export default function TrucksPage({ user, onLogout }) {
         </div>
 
         {/* Add Form */}
-        {showForm && (
+        <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div style={s.formCard}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add New Truck</h3>
@@ -166,7 +167,7 @@ export default function TrucksPage({ user, onLogout }) {
               <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Table */}
         {trucks.length === 0 ? (
