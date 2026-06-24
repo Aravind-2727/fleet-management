@@ -21,7 +21,6 @@ export default function ReportsPage({ user, onLogout }) {
         return;
       }
 
-      // Get financial summary
       const [
         tripsResponse,
         expensesResponse,
@@ -29,26 +28,11 @@ export default function ReportsPage({ user, onLogout }) {
         settlementsResponse,
         paymentsResponse
       ] = await Promise.all([
-        supabase
-          .from('trips')
-          .select('id, freight_amount, status')
-          .eq('owner_id', authUser.id),
-        supabase
-          .from('trip_expenses')
-          .select('amount, paid_by')
-          .eq('owner_id', authUser.id),
-        supabase
-          .from('advance_requests')
-          .select('amount, status')
-          .eq('owner_id', authUser.id),
-        supabase
-          .from('settlements')
-          .select('net_payable, payment_status')
-          .eq('owner_id', authUser.id),
-        supabase
-          .from('payments')
-          .select('amount')
-          .eq('owner_id', authUser.id)
+        supabase.from('trips').select('id, freight_amount, status').eq('owner_id', authUser.id),
+        supabase.from('trip_expenses').select('amount, paid_by').eq('owner_id', authUser.id),
+        supabase.from('advance_requests').select('amount, status').eq('owner_id', authUser.id),
+        supabase.from('settlements').select('net_payable, payment_status').eq('owner_id', authUser.id),
+        supabase.from('payments').select('amount').eq('owner_id', authUser.id)
       ]);
 
       const trips = tripsResponse.data || [];
@@ -60,37 +44,37 @@ export default function ReportsPage({ user, onLogout }) {
       const reportData = [
         {
           title: 'Trip Summary',
-          total: trips.reduce((sum, trip) => sum + (trip.freight_amount || 0), 0),
+          total: trips.reduce((sum, t) => sum + (t.freight_amount || 0), 0),
           count: trips.length,
           icon: 'ti ti-truck',
           color: '#3B82F6',
         },
         {
           title: 'Total Expenses',
-          total: expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0),
+          total: expenses.reduce((sum, e) => sum + (e.amount || 0), 0),
           count: expenses.length,
           icon: 'ti ti-receipt',
           color: '#FB923C',
         },
         {
           title: 'Advance Requests',
-          total: advances.reduce((sum, advance) => sum + (advance.amount || 0), 0),
+          total: advances.reduce((sum, a) => sum + (a.amount || 0), 0),
           count: advances.length,
           icon: 'ti ti-credit-card',
           color: '#8B5CF6',
         },
         {
           title: 'Settlements',
-          total: settlements.reduce((sum, settlement) => sum + (settlement.net_payable || 0), 0),
+          total: settlements.reduce((sum, s) => sum + (s.net_payable || 0), 0),
           count: settlements.length,
           icon: 'ti ti-wallet',
           color: '#22C55E',
         },
         {
           title: 'Total Payments',
-          total: payments.reduce((sum, payment) => sum + (payment.amount || 0), 0),
+          total: payments.reduce((sum, p) => sum + (p.amount || 0), 0),
           count: payments.length,
-          icon: 'ti ti-money',
+          icon: null,
           color: '#7C63FF',
         },
       ];
@@ -130,14 +114,19 @@ export default function ReportsPage({ user, onLogout }) {
           {reports.map((report, index) => (
             <div key={index} style={s.reportCard}>
               <div style={{ ...s.reportIconContainer, backgroundColor: `${report.color}15`, borderColor: `${report.color}25` }}>
-                <i className={report.icon} style={{ fontSize: 32, color: report.color }} />
+                {report.title === 'Total Payments' ? (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={report.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v2m0 8v2M9 9h4.5a1.5 1.5 0 0 1 0 3H10a1.5 1.5 0 0 0 0 3H14"/>
+                  </svg>
+                ) : (
+                  <i className={report.icon} style={{ fontSize: 28, color: report.color }} />
+                )}
               </div>
               <div style={s.reportContent}>
                 <h3 style={s.reportTitle}>{report.title}</h3>
-                <div style={s.reportValue}>
-  ₹{report.total.toLocaleString('en-IN')}
-</div>
-                <div style={s.reportCount}>{report.count} items</div>
+                <div style={s.reportValue}>₹{report.total.toLocaleString('en-IN')}</div>
+                <div style={s.reportCount}>{report.count} {report.count === 1 ? 'item' : 'items'}</div>
               </div>
             </div>
           ))}
@@ -174,9 +163,9 @@ export default function ReportsPage({ user, onLogout }) {
               </div>
               <div style={s.financialValue}>
                 ₹{(
-  (reports.find(r => r.title === 'Trip Summary')?.total || 0) -
-  (reports.find(r => r.title === 'Total Expenses')?.total || 0)
-).toLocaleString('en-IN')}
+                  (reports.find(r => r.title === 'Trip Summary')?.total || 0) -
+                  (reports.find(r => r.title === 'Total Expenses')?.total || 0)
+                ).toLocaleString('en-IN')}
               </div>
             </div>
           </div>
@@ -233,59 +222,59 @@ const s = {
   },
   reportsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: 20,
+    gridTemplateColumns: 'repeat(5, 1fr)',
+    gap: 16,
     marginBottom: 32,
   },
   reportCard: {
     background: '#fff',
     border: '1px solid rgba(20,20,30,0.07)',
     borderRadius: 18,
-    padding: 24,
+    padding: '20px 16px',
     display: 'flex',
-    alignItems: 'center',
-    gap: 20,
-    transition: 'all 0.2s',
-    ':hover': {
-      boxShadow: '0 4px 16px rgba(20,20,30,0.1)',
-      transform: 'translateY(-2px)',
-    },
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 14,
   },
   reportIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     border: '1px solid',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   reportContent: {
     flex: 1,
+    width: '100%',
   },
   reportTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: '0 0 8px',
+    fontSize: 13, fontWeight: 600, color: 'rgba(20,20,30,0.55)', margin: '0 0 6px',
+    textTransform: 'uppercase', letterSpacing: 0.4,
   },
   reportValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 24, fontWeight: 700, color: '#1A1A1F', margin: '0 0 4px',
+    fontSize: 22, fontWeight: 700, color: '#1A1A1F', margin: '0 0 4px',
+    letterSpacing: -0.5,
   },
   reportCount: {
     fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 13, color: 'rgba(20,20,30,0.45)',
+    fontSize: 12, color: 'rgba(20,20,30,0.4)',
   },
   financialSummary: {
-    marginTop: 32,
+    marginTop: 8,
   },
   sectionTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 20, fontWeight: 600, color: '#1A1A1F', marginBottom: 20,
+    fontSize: 20, fontWeight: 600, color: '#1A1A1F', marginBottom: 16,
   },
   financialGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: 20,
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 16,
   },
   financialCard: {
     background: '#fff',
@@ -294,15 +283,15 @@ const s = {
     padding: 24,
   },
   financialHeader: {
-    display: 'flex', alignItems: 'center', gap: 12,
-    marginBottom: 16,
+    display: 'flex', alignItems: 'center', gap: 10,
+    marginBottom: 14,
   },
   financialTitle: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 16, fontWeight: 600, color: '#1A1A1F', margin: 0,
+    fontSize: 15, fontWeight: 600, color: '#1A1A1F', margin: 0,
   },
   financialValue: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: 28, fontWeight: 700, color: '#1A1A1F',
+    fontSize: 28, fontWeight: 700, color: '#1A1A1F', letterSpacing: -0.5,
   },
 };
