@@ -25,9 +25,10 @@ export async function middleware(request) {
 
   if (!needsOwner && !needsDriver) return NextResponse.next();
 
-  // Get Supabase session from cookie
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) return NextResponse.next();
+
+  let response = NextResponse.next({ request });
 
   const { createServerClient } = await import('@supabase/ssr');
   const supabase = createServerClient(
@@ -38,14 +39,18 @@ export async function middleware(request) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll() {},
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
       },
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -53,7 +58,7 @@ export async function middleware(request) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .maybeSingle();
 
   const role = profile?.role;
@@ -68,5 +73,5 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  return NextResponse.next();
+  return response;
 }
