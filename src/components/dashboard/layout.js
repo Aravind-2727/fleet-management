@@ -9,16 +9,21 @@ import Header from './Header';
 const MOBILE_BREAKPOINT = 768;
 
 export default function DashboardLayout({ children, user, onLogout }) {
-  const { userRole } = useAuth();
+  const { userRole, loading } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(false);
 
   useEffect(() => {
-    if (userRole && userRole !== 'owner') {
+    if (loading) return;
+    if (!userRole) {
+      router.push('/');
+      return;
+    }
+    if (userRole !== 'owner') {
       router.push('/driver/home');
     }
-  }, [userRole, router]);
+  }, [userRole, loading, router]);
 
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);

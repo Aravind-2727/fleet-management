@@ -11,7 +11,7 @@ export default function Home() {
   const [role, setRole] = useState('owner');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const { user, login: authLogin, signup: authSignup, resetPassword, loading: authLoading } = useAuth();
+  const { user, userRole, login: authLogin, signup: authSignup, resetPassword, loading: authLoading } = useAuth();
   const router = useRouter();
 useEffect(() => {
   if (!user) {
@@ -21,10 +21,15 @@ useEffect(() => {
 }, [user]);
   // Redirect logged-in users away from login page
   useEffect(() => {
-    if (user && !loading) {
-      router.push('/dashboard');
+    if (authLoading) return;
+    if (user && userRole) {
+      if (userRole === 'driver') {
+        router.push('/driver/home');
+      } else {
+        router.push('/dashboard');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, userRole, authLoading, router]);
 
   const signUp = async () => {
     if (!email.trim()) {

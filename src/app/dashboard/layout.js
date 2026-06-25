@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ProtectedSidebar from '../../components/dashboard/ProtectedSidebar';
 import Header from '../../components/dashboard/Header';
 import { useAuth } from '../../app/lib/AuthContext';
@@ -8,9 +9,21 @@ import { useAuth } from '../../app/lib/AuthContext';
 const BREAKPOINT = 768;
 
 export default function DashboardLayout({ children }) {
-  const { user, loading } = useAuth();
+  const { user, userRole, loading } = useAuth();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
+    if (userRole === 'driver') {
+      router.replace('/driver/home');
+    }
+  }, [user, userRole, loading, router]);
 
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${BREAKPOINT}px)`);

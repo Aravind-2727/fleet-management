@@ -209,10 +209,15 @@ const { user, loading, userRole } = useAuth();
     fetchAlertData();
   }, [user]);
 useEffect(() => {
+  if (loading) return;
+  if (!user) {
+    router.replace('/');
+    return;
+  }
   if (userRole === 'driver') {
     router.replace('/driver/home');
   }
-}, [userRole, router]);
+}, [user, userRole, loading, router]);
   if (loading) {
     return (
       <div style={s.center}>
