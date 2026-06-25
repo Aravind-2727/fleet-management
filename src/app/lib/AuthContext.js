@@ -171,6 +171,22 @@ if (profile) {
     }
   };
 
+  const resetPassword = async (email) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/dashboard`,
+      });
+      if (error) throw error;
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       setLoading(true);
@@ -220,6 +236,7 @@ if (profile) {
     login,
     signup,
     logout,
+    resetPassword,
     isAuthenticated,
     isAuthorized,
   };

@@ -1,9 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '../../app/lib/supabase';
+import { formatCurrency } from '../../app/lib/currency';
 
 export default function StatsCards() {
   const [columns, setColumns] = useState(4);
+  const [stats, setStats] = useState({
+    totalTrucks: 0,
+    totalDrivers: 0,
+    activeTrips: 0,
+    monthlyExpenses: 0,
+    loading: true,
+  });
+
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
@@ -17,6 +27,38 @@ export default function StatsCards() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const [trucksRes, driversRes, tripsRes, expensesRes] = await Promise.all([
+          supabase.from('trucks').select('id').eq('owner_id', user.id),
+          supabase.from('drivers').select('id').eq('owner_id', user.id),
+          supabase.from('trips').select('id').eq('owner_id', user.id).in('status', ['assigned', 'loading', 'in_transit', 'unloading']),
+          supabase.from('trip_expenses').select('amount, expense_date').eq('owner_id', user.id),
+        ]);
+
+        const totalTrucks = trucksRes.data?.length || 0;
+        const totalDrivers = driversRes.data?.length || 0;
+        const activeTrips = tripsRes.data?.length || 0;
+
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const monthlyExpenses = (expensesRes.data || [])
+          .filter(e => e.expense_date && new Date(e.expense_date) >= new Date(monthStart))
+          .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+        setStats({ totalTrucks, totalDrivers, activeTrips, monthlyExpenses, loading: false });
+      } catch (e) {
+        console.error('Error fetching stats:', e);
+        setStats(prev => ({ ...prev, loading: false }));
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div style={{ ...s.statGrid, gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
       <div style={s.statCard}>
@@ -25,7 +67,7 @@ export default function StatsCards() {
         </div>
         <div style={s.shimmer} />
         <p style={s.statLabel}>Total Trucks</p>
-        <p style={s.statValue}>24</p>
+        <p style={s.statValue}>{stats.loading ? '...' : stats.totalTrucks}</p>
       </div>
       <div style={s.statCard}>
         <div style={{ ...s.statIcon, ...s.statIconDriver }}>
@@ -33,7 +75,7 @@ export default function StatsCards() {
         </div>
         <div style={s.shimmer} />
         <p style={s.statLabel}>Total Drivers</p>
-        <p style={s.statValue}>18</p>
+        <p style={s.statValue}>{stats.loading ? '...' : stats.totalDrivers}</p>
       </div>
       <div style={s.statCard}>
         <div style={{ ...s.statIcon, ...s.statIconTrip }}>
@@ -41,7 +83,7 @@ export default function StatsCards() {
         </div>
         <div style={s.shimmer} />
         <p style={s.statLabel}>Active Trips</p>
-        <p style={s.statValue}>12</p>
+        <p style={s.statValue}>{stats.loading ? '...' : stats.activeTrips}</p>
       </div>
       <div style={s.statCardAccent}>
         <div style={{ ...s.statIcon, ...s.statIconExpense }}>
@@ -49,7 +91,7 @@ export default function StatsCards() {
         </div>
         <div style={s.shimmer} />
         <p style={{ ...s.statLabel, color: '#7C63FF' }}>Monthly Expenses</p>
-        <p style={{ ...s.statValue, color: '#7C63FF' }}>₹2,45,000</p>
+        <p style={{ ...s.statValue, color: '#7C63FF' }}>{stats.loading ? '...' : formatCurrency(stats.monthlyExpenses)}</p>
       </div>
     </div>
   );

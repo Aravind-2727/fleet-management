@@ -14,7 +14,6 @@ import RevenueExpenseChart from '../../components/dashboard/RevenueExpenseChart'
 import NotificationsPanel from '../../components/dashboard/NotificationsPanel';
 import DashboardAlertCards from '../../components/dashboard/DashboardAlertCards';
 import NotificationPanel from '../../components/dashboard/NotificationPanel';
-import WelcomePanel from '../../components/dashboard/WelcomePanel';
 
 export default function Dashboard() {
 const { user, loading, userRole } = useAuth();
@@ -258,7 +257,6 @@ useEffect(() => {
       <ActiveDrivers drivers={drivers} driversLoading={driversLoading} />
       <FleetStatus trucks={trucks} trucksLoading={trucksLoading} />
       <RevenueExpenseChart analytics={analytics} />
-      <WelcomePanel />
     </div>
   );
 }

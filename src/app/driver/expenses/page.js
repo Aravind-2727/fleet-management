@@ -6,20 +6,15 @@ import { formatCurrency } from '../../lib/currency';
 import { useAuth } from '../../lib/AuthContext';
 import { withRoleProtection } from '../../lib/withRoleProtection';
 import DashboardLayout from '../../dashboard/layout';
+import ExpenseModal from '../../../components/driver/ExpenseModal';
+
 function DriverExpenses() {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [trips, setTrips] = useState([]);
   const [driverId, setDriverId] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    tripId: '',
-    category: 'Fuel',
-    amount: '',
-    notes: '',
-  });
 
   useEffect(() => {
     if (!user) return;
@@ -71,44 +66,6 @@ function DriverExpenses() {
     }
   };
 
-  const saveExpense = async () => {
-    if (!formData.tripId || !formData.amount) {
-      alert('Please fill all required fields');
-      return;
-    }
-
-    const parsedAmount = parseFloat(formData.amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('Please enter a valid positive amount');
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from('trip_expenses').insert([{
-        owner_id: user.id,
-        trip_id: formData.tripId,
-        driver_id: driverId,
-        category: formData.category,
-        amount: parsedAmount,
-        paid_by: 'driver_paid',
-        status: 'pending',
-        notes: formData.notes,
-      }]);
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      setFormData({ tripId: '', category: 'Fuel', amount: '', notes: '' });
-      setShowForm(false);
-      fetchDriverData();
-    } catch (error) {
-      console.error('Error creating expense:', error);
-      alert('Failed to submit expense. Please try again.');
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#FB923C';
@@ -144,72 +101,14 @@ function DriverExpenses() {
         </button>
       </div>
 
-      {showForm && (
-        <div style={s.formCard}>
-          <div style={s.shimmer} />
-          <h3 style={s.formTitle}>Submit Expense</h3>
-
-          <div style={s.formGrid}>
-            <div style={s.formField}>
-              <label style={s.label}>Trip</label>
-              <select
-                value={formData.tripId}
-                onChange={(e) => setFormData({ ...formData, tripId: e.target.value })}
-                style={s.input}
-              >
-                <option value="">Select Trip</option>
-                {trips.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    {trip.origin} → {trip.destination}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={s.formField}>
-              <label style={s.label}>Category</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                style={s.input}
-              >
-                <option value="Fuel">Fuel</option>
-                <option value="Toll">Toll</option>
-                <option value="Food">Food</option>
-                <option value="Repair">Repair</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div style={s.formField}>
-              <label style={s.label}>Amount (₹)</label>
-              <input
-                type="number"
-                placeholder="e.g. 500"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                style={s.input}
-              />
-            </div>
-
-            <div style={s.formField}>
-              <label style={s.label}>Notes</label>
-              <input
-                placeholder="Optional notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                style={s.input}
-              />
-            </div>
-          </div>
-
-          <div style={s.formActions}>
-            <button onClick={saveExpense} style={s.saveBtn}>Submit Expense</button>
-            <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
-          </div>
-        </div>
-      )}
+      <ExpenseModal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={fetchDriverData}
+        trips={trips}
+        driverId={driverId}
+        userId={user.id}
+      />
 
       {expenses.length === 0 ? (
         <div style={s.empty}>No expenses submitted yet</div>
@@ -239,10 +138,10 @@ function DriverExpenses() {
                   <td style={s.td}>
                     <span style={{
                       ...s.paidByBadge,
-                      backgroundColor: '#22C55E15',
-                      color: '#16A34A',
+                      backgroundColor: expense.paid_by === 'company_paid' ? '#3B82F615' : '#22C55E15',
+                      color: expense.paid_by === 'company_paid' ? '#2563EB' : '#16A34A',
                     }}>
-                      Driver Paid
+                      {expense.paid_by === 'company_paid' ? 'Company Paid' : 'Driver Paid'}
                     </span>
                   </td>
                   <td style={s.td}>

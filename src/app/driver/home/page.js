@@ -56,7 +56,7 @@ function DriverHome() {
         // Active trip
         const { data: trip, error: tripError } = await supabase
           .from('trips')
-          .select('id, status, origin, destination, customer, truck_name, start_location, end_location, created_at, owner_id')
+          .select('id, status, origin, destination, customer, created_at, owner_id, trucks(truck_number)')
           .eq('driver_id', driverId)
           .in('status', ['assigned', 'loading', 'in_transit', 'unloading'])
           .order('created_at', { ascending: true })
@@ -172,7 +172,7 @@ return (
               <div>
                 <p style={s.cardText}><strong>Route:</strong> {assignedTrip.origin} → {assignedTrip.destination}</p>
                 <p style={s.cardText}><strong>Customer:</strong> {assignedTrip.customer}</p>
-                <p style={s.cardText}><strong>Truck:</strong> {assignedTrip.truck_name}</p>
+                <p style={s.cardText}><strong>Truck:</strong> {assignedTrip.trucks?.truck_number || 'Unknown'}</p>
                 <p style={s.cardText}><strong>Status:</strong> 
                   <span style={{ ...s.statusBadge, backgroundColor: `${getStatusColor(assignedTrip.status)}15`, color: getStatusColor(assignedTrip.status) }}>
                     {assignedTrip.status}

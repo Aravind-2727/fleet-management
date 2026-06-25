@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { withRoleProtection } from '../../lib/withRoleProtection';
 import DashboardLayout from '../../dashboard/layout';
+import AdvanceRequestModal from '../../../components/driver/AdvanceRequestModal';
+
 const formatCurrency = (amount) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -17,12 +19,7 @@ function DriverAdvances() {
   const [advances, setAdvances] = useState([]);
   const [driverId, setDriverId] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    amount: '',
-    reason: '',
-  });
 
   useEffect(() => {
     if (!user) return;
@@ -65,41 +62,6 @@ function DriverAdvances() {
     }
   };
 
-  const saveAdvance = async () => {
-    if (!formData.amount || !formData.reason) {
-      alert('Please fill all required fields');
-      return;
-    }
-
-    const parsedAmount = parseFloat(formData.amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('Please enter a valid positive amount');
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from('advance_requests').insert([{
-        owner_id: user.id,
-        driver_id: driverId,
-        amount: parsedAmount,
-        reason: formData.reason,
-        status: 'pending',
-      }]);
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      setFormData({ amount: '', reason: '' });
-      setShowForm(false);
-      fetchDriverData();
-    } catch (error) {
-      console.error('Error creating advance:', error);
-      alert('Failed to submit advance request. Please try again.');
-    }
-  };
-
   const getStatusStyle = (status) => {
     switch (status) {
       case 'pending':  return { backgroundColor: '#FB923C15', color: '#FB923C' };
@@ -136,40 +98,13 @@ return (
         </button>
       </div>
 
-      {showForm && (
-        <div style={s.formCard}>
-          <div style={s.shimmer} />
-          <h3 style={s.formTitle}>Request Early Payout</h3>
-
-          <div style={s.formGrid}>
-            <div style={s.formField}>
-              <label style={s.label}>Amount (₹)</label>
-              <input
-                type="number"
-                placeholder="e.g. 2000"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                style={s.input}
-              />
-            </div>
-
-            <div style={{ ...s.formField, gridColumn: 'span 2' }}>
-              <label style={s.label}>Reason</label>
-              <textarea
-                placeholder="e.g. Emergency medical expense"
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                style={{ ...s.input, minHeight: 80, resize: 'vertical' }}
-              />
-            </div>
-          </div>
-
-          <div style={s.formActions}>
-            <button onClick={saveAdvance} style={s.saveBtn}>Submit Request</button>
-            <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
-          </div>
-        </div>
-      )}
+      <AdvanceRequestModal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={fetchDriverData}
+        driverId={driverId}
+        userId={user.id}
+      />
 
       {advances.length === 0 ? (
         <div style={s.empty}>No advance requests</div>

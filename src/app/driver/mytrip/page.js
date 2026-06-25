@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/AuthContext';
 import { useRouter } from 'next/navigation';
 import { withRoleProtection } from '../../lib/withRoleProtection';
+import TripUpdateModal from '../../../components/driver/TripUpdateModal';
 
 function MyTrip() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ function MyTrip() {
   const [statusOptions] = useState(['assigned', 'loading', 'in_transit', 'unloading', 'delivered']);
   const [statusIndex, setStatusIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +40,7 @@ function MyTrip() {
 
         const { data, error } = await supabase
           .from('trips')
-          .select('id, status, origin, destination, customer, truck_name, start_location, end_location, created_at, owner_id, driver_id')
+          .select('id, status, origin, destination, customer, created_at, owner_id, driver_id, trucks(truck_number)')
           .eq('driver_id', driverId)
           .in('status', ['assigned', 'loading', 'in_transit', 'unloading'])
           .order('created_at', { ascending: true })
@@ -92,6 +94,7 @@ function MyTrip() {
         return;
       }
 
+      setShowConfirm(false);
       // Refresh trip data
       setTrip({ ...trip, status: data.status });
       // Update statusIndex if needed
@@ -157,15 +160,15 @@ function MyTrip() {
             </div>
             <div>
               <p style={s.detailLabel}>Truck</p>
-              <p style={s.detailValue}>{trip.truck_name}</p>
+              <p style={s.detailValue}>{trip.trucks?.truck_number || 'Unknown'}</p>
             </div>
             <div>
-              <p style={s.detailLabel}>Start Location</p>
-              <p style={s.detailValue}>{trip.start_location}</p>
+              <p style={s.detailLabel}>Origin</p>
+              <p style={s.detailValue}>{trip.origin}</p>
             </div>
             <div>
-              <p style={s.detailLabel}>End Location</p>
-              <p style={s.detailValue}>{trip.end_location}</p>
+              <p style={s.detailLabel}>Destination</p>
+              <p style={s.detailValue}>{trip.destination}</p>
             </div>
             <div>
               <p style={s.detailLabel}>Started</p>
@@ -178,11 +181,10 @@ function MyTrip() {
               <h4 style={s.actionTitle}>Next Action</h4>
               <p style={s.actionText}>Update trip status to: <strong>{nextStatus}</strong></p>
               <button 
-                onClick={updateStatus}
-                disabled={loading}
+                onClick={() => setShowConfirm(true)}
                 style={s.updateButton}
               >
-                {loading ? 'Updating...' : `Update to ${nextStatus}`}
+                Update to {nextStatus}
               </button>
             </div>
           ) : (
@@ -196,6 +198,14 @@ function MyTrip() {
           )}
         </div>
       </div>
+
+      <TripUpdateModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={updateStatus}
+        nextStatus={nextStatus}
+        loading={loading}
+      />
     </div>
   );
 }

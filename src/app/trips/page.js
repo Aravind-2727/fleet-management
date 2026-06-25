@@ -478,7 +478,6 @@ export default function TripsPage({ user, onLogout }) {
                   <th style={s.th}>Truck</th>
                   <th style={s.th}>Freight</th>
                   <th style={s.th}>Status</th>
-                  <th style={s.th}>Status</th>
                   <th style={s.th}>Documents</th>
                   <th style={s.th}>Actions</th>
                 </tr>

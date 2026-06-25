@@ -21,6 +21,7 @@ export default function ExpensesPage({ user, onLogout }) {
     category: 'Fuel',
     amount: '',
     paidBy: 'driver_paid',
+    expenseDate: new Date().toISOString().split('T')[0],
     notes: '',
   });
   const [receiptFiles, setReceiptFiles] = useState([]);
@@ -179,6 +180,7 @@ export default function ExpensesPage({ user, onLogout }) {
             amount: parsedAmount,
             paid_by: formData.paidBy,
             status: 'pending',
+            expense_date: formData.expenseDate,
             notes: formData.notes,
           },
         ])
@@ -207,6 +209,7 @@ export default function ExpensesPage({ user, onLogout }) {
         category: 'Fuel',
         amount: '',
         paidBy: 'driver_paid',
+        expenseDate: new Date().toISOString().split('T')[0],
         notes: '',
       });
       setReceiptFiles([]);
@@ -481,6 +484,16 @@ export default function ExpensesPage({ user, onLogout }) {
                   <option value="driver_paid">Driver Paid</option>
                   <option value="company_paid">Company Paid</option>
                 </select>
+              </div>
+
+              <div style={s.formField}>
+                <label style={s.label}>Date</label>
+                <input
+                  type="date"
+                  value={formData.expenseDate}
+                  onChange={(e) => setFormData({...formData, expenseDate: e.target.value})}
+                  style={s.input}
+                />
               </div>
 
               <div style={s.formField}>

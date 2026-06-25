@@ -10,7 +10,8 @@ export default function Home() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('owner');
   const [loading, setLoading] = useState(false);
-  const { user, login: authLogin, signup: authSignup, loading: authLoading } = useAuth();
+  const [resetSent, setResetSent] = useState(false);
+  const { user, login: authLogin, signup: authSignup, resetPassword, loading: authLoading } = useAuth();
   const router = useRouter();
 useEffect(() => {
   if (!user) {
@@ -55,6 +56,18 @@ useEffect(() => {
       setLoading(false);
     }
   };
+  const handleResetPassword = async () => {
+    if (!email.trim()) { alert('Please enter your email address first'); return; }
+    if (authLoading) return;
+    try {
+      await resetPassword(email.trim());
+      setResetSent(true);
+      alert('Password reset link sent to your email');
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   const login = async () => {
     if (authLoading) return;
     
@@ -108,6 +121,18 @@ useEffect(() => {
   onChange={(e) => setPassword(e.target.value)}
   style={s.input}
 />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <button
+              onClick={handleResetPassword}
+              style={{
+                background: 'none', border: 'none', color: '#7C63FF',
+                cursor: 'pointer', fontSize: 12, fontFamily: "'Space Grotesk', sans-serif",
+                padding: 0,
+              }}
+            >
+              Forgot password?
+            </button>
+          </div>
         </div>
 
         <div style={s.field}>

@@ -10,6 +10,26 @@ export const withRoleProtection = (WrappedComponent, requiredRoute) => {
     const router = useRouter();
     const { userRole, loading } = useAuth();
 
+    const hasAccess = canAccessRoute(requiredRoute, userRole);
+
+  
+    useEffect(() => {
+      if (!loading && !userRole) {
+        router.replace('/');
+      }
+    }, [loading, userRole, router]);
+
+    useEffect(() => {
+      if (!loading && userRole && !hasAccess) {
+        if (userRole === 'driver') {
+          router.replace('/driver/home');
+        } else {
+          router.replace('/dashboard');
+        }
+      }
+    }, [loading, userRole, hasAccess, router]);
+
+
     if (loading) {
       return (
         <div style={s.loadingContainer}>
@@ -19,29 +39,10 @@ export const withRoleProtection = (WrappedComponent, requiredRoute) => {
       );
     }
 
-  
-
-    const hasAccess = canAccessRoute(requiredRoute, userRole);
-    
-   useEffect(() => {
-  if (!loading && !userRole) {
-    router.replace('/');
-  }
-}, [loading, userRole, router]);
-
-useEffect(() => {
-  if (!loading && userRole && !hasAccess) {
-    if (userRole === 'driver') {
-      router.replace('/driver/home');
-    } else {
-      router.replace('/dashboard');
+    if (!userRole || !hasAccess) {
+      return null;
     }
-  }
-}, [loading, userRole, hasAccess, router]);
 
-if (!userRole || !hasAccess) {
-  return null;
-}
     return <WrappedComponent {...props} userRole={userRole} />;
   };
 };

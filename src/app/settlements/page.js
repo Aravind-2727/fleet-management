@@ -36,13 +36,13 @@ export default function SettlementsPage({ user, onLogout }) {
     paymentDate: '',
   });
 
-  useEffect(() => {
+  const computedNetPayable = (() => {
     const earnings = parseFloat(formData.earnings) || 0;
     const reimbursable = parseFloat(formData.reimbursableExpenses) || 0;
     const advances = parseFloat(formData.advancesDeducted) || 0;
     const calculated = earnings + reimbursable - advances;
-    setFormData(prev => ({ ...prev, netPayable: calculated > 0 ? calculated.toFixed(2) : '' }));
-  }, [formData.earnings, formData.reimbursableExpenses, formData.advancesDeducted]);
+    return calculated > 0 ? calculated.toFixed(2) : '';
+  })();
 
   const [summary, setSummary] = useState({
     totalSettlements: 0,
@@ -207,7 +207,7 @@ export default function SettlementsPage({ user, onLogout }) {
   };
 
   const saveSettlement = async () => {
-    if (!formData.driverId || !formData.tripId || !formData.netPayable) {
+    if (!formData.driverId || !formData.tripId || !computedNetPayable) {
       alert('Please fill all required fields');
       return;
     }
@@ -215,7 +215,7 @@ export default function SettlementsPage({ user, onLogout }) {
     const parsedEarnings = parseFloat(formData.earnings) || 0;
     const parsedReimbursableExpenses = parseFloat(formData.reimbursableExpenses) || 0;
     const parsedAdvancesDeducted = parseFloat(formData.advancesDeducted) || 0;
-    const parsedNetPayable = parseFloat(formData.netPayable);
+    const parsedNetPayable = parseFloat(computedNetPayable);
 
     if (isNaN(parsedNetPayable) || parsedNetPayable <= 0) {
       alert('Please enter a valid positive net payable amount');
@@ -272,7 +272,6 @@ export default function SettlementsPage({ user, onLogout }) {
         earnings: '',
         reimbursableExpenses: '0',
         advancesDeducted: '0',
-        netPayable: '',
         paymentStatus: 'pending',
         paymentMode: '',
         paymentDate: '',
@@ -461,7 +460,7 @@ export default function SettlementsPage({ user, onLogout }) {
                 <input
                   type="number"
                   placeholder="Auto-calculated"
-                  value={formData.netPayable}
+                  value={computedNetPayable}
                   readOnly
                   style={{ ...s.input, background: 'rgba(20,20,30,0.04)', cursor: 'not-allowed' }}
                 />
