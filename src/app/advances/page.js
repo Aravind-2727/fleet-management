@@ -164,12 +164,12 @@ export default function AdvancesPage({ user, onLogout }) {
 
   if (loading) {
     return (
-      <div style={s.root}>
+      <DashboardLayout user={user} onLogout={onLogout}>
         <div style={s.center}>
           <div style={s.spinnerRing}><div style={s.spinner} /></div>
           <p style={s.muted}>Loading advances...</p>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
