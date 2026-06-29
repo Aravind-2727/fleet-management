@@ -134,10 +134,24 @@ export default function SettlementsPage({ user, onLogout }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) { setTrips([]); return; }
 
-      const { data, error } = await supabase
-        .from('trips')
-        .select('id, origin, destination, customer, status, close_status')
+      const { data: settledTrips } = await supabase
+        .from('settlements')
+        .select('trip_id')
         .eq('owner_id', authUser.id);
+
+      const settledTripIds = settledTrips?.map(s => s.trip_id) || [];
+
+      let query = supabase
+        .from('trips')
+        .select('id, origin, destination, customer, status, close_status, driver_id')
+        .eq('owner_id', authUser.id)
+        .or('status.eq.pending_settlement,and(status.eq.delivered,close_status.eq.true)');
+
+      if (settledTripIds.length > 0) {
+        query = query.not('id', 'in', `(${settledTripIds.join(',')})`);
+      }
+
+      const { data, error } = await query;
 
       if (error) console.error('Error fetching trips:', error);
       else setTrips(data || []);
@@ -153,6 +167,51 @@ export default function SettlementsPage({ user, onLogout }) {
     } catch (error) {
       console.error('Error fetching settlement documents:', error);
     }
+  };
+
+  const handleTripSelect = async (tripId) => {
+    if (!tripId) {
+  setFormData(prev => ({
+    ...prev,
+    driverId: '',
+    tripId: '',
+    reimbursableExpenses: '0',
+    advancesDeducted: '0',
+  }));
+  return;
+}
+
+    const selectedTrip = trips.find(t => t.id === tripId);
+    const driverId = selectedTrip?.driver_id;
+
+    let totalReimbursable = 0;
+    let totalAdvances = 0;
+
+    if (tripId) {
+      const { data: expensesData } = await supabase
+        .from('trip_expenses')
+        .select('amount')
+        .eq('trip_id', tripId)
+        .eq('paid_by', 'driver_paid');
+      totalReimbursable = expensesData?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+    }
+
+    if (driverId) {
+      const { data: advancesData } = await supabase
+        .from('advance_requests')
+        .select('amount')
+        .eq('driver_id', driverId)
+        .in('status', ['paid', 'approved']);
+      totalAdvances = advancesData?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
+    }
+
+ setFormData(prev => ({
+  ...prev,
+  driverId: driverId || '',
+  tripId,
+  reimbursableExpenses: String(totalReimbursable),
+  advancesDeducted: String(totalAdvances),
+}));
   };
 
   const handleFileChange = (e) => {
@@ -207,7 +266,7 @@ export default function SettlementsPage({ user, onLogout }) {
   };
 
   const saveSettlement = async () => {
-    if (!formData.driverId || !formData.tripId || !computedNetPayable) {
+  if (!formData.driverId || !formData.tripId) {
       alert('Please fill all required fields');
       return;
     }
@@ -217,10 +276,10 @@ export default function SettlementsPage({ user, onLogout }) {
     const parsedAdvancesDeducted = parseFloat(formData.advancesDeducted) || 0;
     const parsedNetPayable = parseFloat(computedNetPayable);
 
-    if (isNaN(parsedNetPayable) || parsedNetPayable <= 0) {
-      alert('Please enter a valid positive net payable amount');
-      return;
-    }
+  if (isNaN(parsedNetPayable)) {
+  alert('Please enter a valid net payable amount');
+  return;
+}
 
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -429,7 +488,7 @@ export default function SettlementsPage({ user, onLogout }) {
 
               <div style={s.formField}>
                 <label style={s.label}>Trip</label>
-                <select value={formData.tripId} onChange={(e) => setFormData({...formData, tripId: e.target.value})} style={s.input}>
+                <select value={formData.tripId} onChange={(e) => handleTripSelect(e.target.value)} style={s.input}>
                   <option value="">Select Trip</option>
                   {trips.map(t => (
                     <option key={t.id} value={t.id}>{t.origin} → {t.destination}</option>
@@ -471,7 +530,6 @@ export default function SettlementsPage({ user, onLogout }) {
                 <select value={formData.paymentStatus} onChange={(e) => setFormData({...formData, paymentStatus: e.target.value})} style={s.input}>
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
-                  <option value="partial">Partial</option>
                 </select>
               </div>
 
@@ -571,7 +629,6 @@ export default function SettlementsPage({ user, onLogout }) {
                       >
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
-                        <option value="partial">Partial</option>
                       </select>
                     </td>
                     <td style={s.td}>{settlement.payment_mode || '—'}</td>
