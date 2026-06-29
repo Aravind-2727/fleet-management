@@ -20,9 +20,6 @@ export default function DashboardLayout({ children }) {
       router.replace('/');
       return;
     }
-    if (userRole === 'driver') {
-      router.replace('/driver/home');
-    }
   }, [user, userRole, loading, router]);
 
   useEffect(() => {

@@ -39,19 +39,21 @@ function DriverHome() {
           return;
         }
 
-        const driverId = profile?.id;
-        if (!driverId) return;
+        if (!profile) return;
 
         // Get driver info
         const { data: driver, error: driverError } = await supabase
           .from('drivers')
           .select('id, owner_id, pay_type, salary_amount')
-          .eq('profile_id', driverId)
+          .eq('profile_id', profile.id)
        .maybeSingle();
         if (driverError) {
           console.error('Driver fetch error:', driverError);
           return;
         }
+
+        const driverId = driver?.id;
+        if (!driverId) return;
 
         // Active trip
         const { data: trip, error: tripError } = await supabase

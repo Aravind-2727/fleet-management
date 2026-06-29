@@ -35,7 +35,20 @@ function MyTrip() {
           return;
         }
 
-        const driverId = profile?.id;
+        if (!profile) return;
+
+        const { data: driver, error: driverError } = await supabase
+          .from('drivers')
+          .select('id')
+          .eq('profile_id', profile.id)
+          .single();
+
+        if (driverError) {
+          console.error('Driver fetch error:', driverError);
+          return;
+        }
+
+        const driverId = driver?.id;
         if (!driverId) return;
 
         const { data, error } = await supabase
