@@ -7,16 +7,20 @@ import Modal from '../../components/common/Modal';
 
 export default function TrucksPage({ user, onLogout }) {
   const [trucks, setTrucks] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   const [formData, setFormData] = useState({
     truckNumber: '',
+    status: 'Active',
+
     notes: '',
   });
 
   useEffect(() => {
     fetchTrucks();
+    fetchDrivers();
   }, []);
 
   const fetchTrucks = async () => {
@@ -36,13 +40,56 @@ export default function TrucksPage({ user, onLogout }) {
 
       if (error) {
         console.error('Error fetching trucks:', error);
+        setTrucks([]);
       } else {
-        setTrucks(data || []);
+        // Active trips determine which driver is assigned to each truck
+        const { data: activeTrips } = await supabase
+          .from('trips')
+          .select(`
+            truck_id,
+            drivers(id, name)
+          `)
+          .eq('owner_id', authUser.id)
+          .not('status', 'in', '("delivered","pending_settlement")');
+
+        const driverMap = {};
+        if (activeTrips) {
+          activeTrips.forEach(trip => {
+            if (trip.truck_id && trip.drivers?.name) {
+              driverMap[trip.truck_id] = trip.drivers.name;
+            }
+          });
+        }
+
+        const enriched = (data || []).map(truck => ({
+          ...truck,
+          assignedDriverName: driverMap[truck.id] || null,
+        }));
+
+        setTrucks(enriched);
       }
     } catch (error) {
       console.error('Error fetching trucks:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) { setDrivers([]); return; }
+
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, name, phone, status')
+        .eq('owner_id', authUser.id)
+        .order('name', { ascending: true });
+
+      if (error) console.error('Error fetching drivers:', error);
+      else setDrivers(data || []);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
     }
   };
 
@@ -65,7 +112,8 @@ export default function TrucksPage({ user, onLogout }) {
           {
             owner_id: authUser.id,
             truck_number: formData.truckNumber.trim(),
-            status: 'Active',
+            status: formData.status,
+          
             notes: formData.notes.trim(),
           },
         ]);
@@ -76,7 +124,8 @@ export default function TrucksPage({ user, onLogout }) {
         return;
       }
 
-      setFormData({ truckNumber: '', notes: '' });
+      setFormData({ truckNumber: '', status:
+         'Active',  notes: '' });
       setShowForm(false);
       fetchTrucks();
       alert('Truck added successfully');
@@ -152,6 +201,21 @@ export default function TrucksPage({ user, onLogout }) {
               </div>
 
               <div style={s.formField}>
+                <label style={s.label}>Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                  style={s.input}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Under Maintenance">Under Maintenance</option>
+                </select>
+              </div>
+
+            
+
+              <div style={s.formField}>
                 <label style={s.label}>Notes</label>
                 <input
                   placeholder="Optional notes"
@@ -179,6 +243,7 @@ export default function TrucksPage({ user, onLogout }) {
                 <tr>
                   <th style={s.th}>Truck Number</th>
                   <th style={s.th}>Status</th>
+                  <th style={s.th}>Assigned Driver</th>
                   <th style={s.th}>Notes</th>
                   <th style={{ ...s.th, textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -192,6 +257,7 @@ export default function TrucksPage({ user, onLogout }) {
                         {truck.status}
                       </span>
                     </td>
+                    <td style={s.td}>{truck.assignedDriverName || 'Unassigned'}</td>
                     <td style={{ ...s.td, color: 'rgba(20,20,30,0.45)' }}>{truck.notes || '—'}</td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
                       <button onClick={() => deleteTruck(truck.id)} style={s.deleteBtn}>
@@ -340,7 +406,7 @@ const s = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: 500,
+    minWidth: 650,
   },
   th: {
     textAlign: 'left',

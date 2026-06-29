@@ -6,8 +6,8 @@ import Link from 'next/link';
 
 const NAV_ITEMS = [
   { id: 'dashboard',       label: 'Dashboard',    path: '/dashboard',        icon: 'ti ti-layout-dashboard' },
-  { id: 'trips',           label: 'Trips',         path: '/trips',            icon: 'ti ti-truck' },
-  { id: 'trips-management',label: 'Trucks',        path: '/trips-management', icon: 'ti ti-route' },
+  { id: 'trips',           label: 'Trips',         path: '/trips',            icon: 'ti ti-route' },
+  { id: 'trucks',          label: 'Trucks',        path: '/trucks',           icon: 'ti ti-truck' },
   { id: 'drivers',         label: 'Drivers',       path: '/drivers',          icon: 'ti ti-users' },
   { id: 'expenses',        label: 'Expenses',      path: '/expenses',         icon: 'ti ti-receipt' },
   { id: 'advances',        label: 'Advances',      path: '/advances',         icon: 'ti ti-wallet' },
