@@ -28,6 +28,7 @@ export default function ExpensesPage({ user, onLogout }) {
   const [expenseDocuments, setExpenseDocuments] = useState({});
   const [expandedExpenseId, setExpandedExpenseId] = useState(null);
   const [docLoading, setDocLoading] = useState({});
+  const [selectedStatus, setSelectedStatus] = useState({});
 
   const [summary, setSummary] = useState({
     total: 0,
@@ -169,6 +170,7 @@ export default function ExpensesPage({ user, onLogout }) {
       }
 
       setFormLoading(true);
+      const initialStatus = formData.paidBy === 'company_paid' ? 'paid' : 'pending';
       const { data: expenseData, error } = await supabase
         .from('trip_expenses')
         .insert([
@@ -179,7 +181,7 @@ export default function ExpensesPage({ user, onLogout }) {
             category: formData.category,
             amount: parsedAmount,
             paid_by: formData.paidBy,
-            status: 'pending',
+            status: initialStatus,
             expense_date: formData.expenseDate,
             notes: formData.notes,
           },
@@ -570,8 +572,7 @@ export default function ExpensesPage({ user, onLogout }) {
                 {expenses.map((expense) => (
                   <Fragment key={expense.id}>
                     <tr
-                      onClick={() => toggleExpenseExpand(expense.id)}
-                      style={{ ...s.tr, cursor: 'pointer' }}
+                      style={s.tr}
                     >
                       <td style={s.td}>{getTripCustomer(expense.trip_id)}</td>
                       <td style={s.td}>{getDriverName(expense.driver_id)}</td>
@@ -589,8 +590,13 @@ export default function ExpensesPage({ user, onLogout }) {
                       <td style={s.td}>
                         <select
                           value={expense.status}
-                          onChange={(e) => updateExpenseStatus(expense.id, e.target.value)}
-                          style={{ ...s.statusSelect, backgroundColor: getStatusColor(expense.status), color: '#fff' }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setSelectedStatus(prev => ({ ...prev, [expense.id]: e.target.value }));
+                            updateExpenseStatus(expense.id, e.target.value);
+                          }}
+                          style={{ ...s.statusSelect, backgroundColor: getStatusColor(selectedStatus[expense.id] || expense.status), color: '#fff' }}
                         >
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
@@ -610,7 +616,7 @@ export default function ExpensesPage({ user, onLogout }) {
                         </span>
                       </td>
                       <td style={s.td}>
-                        <button onClick={() => deleteExpense(expense.id)} style={s.deleteBtn}>
+                        <button onClick={(e) => { e.stopPropagation(); deleteExpense(expense.id); }} style={s.deleteBtn}>
                           Delete
                         </button>
                       </td>
@@ -867,7 +873,7 @@ const s = {
     whiteSpace: 'nowrap',
   },
   tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
-  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' },
+  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap', verticalAlign: 'middle' },
   statusSelect: {
     border: 'none', borderRadius: 20,
     padding: '4px 12px', fontSize: 12, fontWeight: 600,

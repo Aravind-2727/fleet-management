@@ -142,15 +142,16 @@ const { user, loading, userRole } = useAuth();
       const [tripsRes, custRes, drvRes] = await Promise.all([
         supabase.from('trips').select('id, truck_id, driver_id, freight_amount, status, created_at')
           .eq('owner_id', user.id).eq('status', 'pending_settlement').order('created_at', { ascending: false }),
-        supabase.from('customer_payments').select('id, customer_id, amount, status, created_at')
-          .eq('owner_id', user.id).eq('status', 'pending').order('created_at', { ascending: false }),
+        supabase.from('trips').select('id, freight_amount, received_amount')
+          .eq('owner_id', user.id),
         supabase.from('drivers').select('id, profile_id, payment_status, created_at, profiles(name)')
           .eq('owner_id', user.id).eq('payment_status', 'pending').order('created_at', { ascending: false })
       ]);
 
       const newNotifications = [];
       const trips = tripsRes.data || [];
-      const cust = custRes.data || [];
+      const allTrips = custRes.data || [];
+      const cust = allTrips.filter(t => (t.received_amount || 0) < (t.freight_amount || 0));
       const drv = drvRes.data || [];
 
       if (trips.length > 0) newNotifications.push({
@@ -185,17 +186,19 @@ const { user, loading, userRole } = useAuth();
     try {
       const [settlRes, custRes, overdueRes, transitRes, waitRes, delivRes, payableRes] = await Promise.all([
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'pending_settlement'),
-        supabase.from('customer_payments').select('id').eq('owner_id', user.id).eq('status', 'pending'),
-        supabase.from('customer_payments').select('id').eq('owner_id', user.id).eq('status', 'overdue'),
+        supabase.from('trips').select('id, freight_amount, received_amount').eq('owner_id', user.id),
+        supabase.from('trips').select('id, freight_amount, received_amount, status').eq('owner_id', user.id).eq('status', 'delivered'),
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'in_transit'),
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'waiting_for_delivery'),
         supabase.from('trips').select('id').eq('owner_id', user.id).eq('status', 'delivered').eq('close_status', true),
         supabase.from('settlements').select('net_payable').eq('owner_id', user.id).eq('payment_status', 'pending')
       ]);
 
+      const allTrips = custRes.data || [];
+      const deliveredTrips = overdueRes.data || [];
       setPendingSettlements(settlRes.data?.length || 0);
-      setPendingCustomerPayments(custRes.data?.length || 0);
-      setOverduePayments(overdueRes.data?.length || 0);
+      setPendingCustomerPayments(allTrips.filter(t => (t.received_amount || 0) < (t.freight_amount || 0)).length);
+      setOverduePayments(deliveredTrips.filter(t => (t.received_amount || 0) < (t.freight_amount || 0)).length);
       setTripsInTransit(transitRes.data?.length || 0);
       setTripsWaitingForDelivery(waitRes.data?.length || 0);
       setDeliveredTripsPendingSettlement(delivRes.data?.length || 0);

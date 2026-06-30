@@ -486,8 +486,7 @@ export default function TripsPage({ user, onLogout }) {
                 {trips.map((trip) => (
                   <Fragment key={trip.id}>
                     <tr
-                      onClick={() => toggleTripExpand(trip.id)}
-                      style={{ ...s.tr, cursor: 'pointer' }}
+                      style={s.tr}
                     >
                       <td style={s.td}>{trip.origin} → {trip.destination}</td>
                       <td style={s.td}>{trip.customer}</td>
@@ -778,7 +777,7 @@ const s = {
     whiteSpace: 'nowrap',
   },
   tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
-  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' },
+  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap', verticalAlign: 'middle' },
   statusBadge: {
     display: 'inline-block', padding: '4px 12px', borderRadius: 20,
     fontSize: 12, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif",

@@ -47,7 +47,13 @@ export default function PaymentsPage({ user, onLogout }) {
       if (error) console.error('Error fetching payments:', error);
       else {
         setPayments(data || []);
-        calculateSummary(data || []);
+
+        const { data: tripsData } = await supabase
+          .from('trips')
+          .select('received_amount')
+          .eq('owner_id', authUser.id);
+
+        calculateSummary(data || [], tripsData || []);
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -86,13 +92,12 @@ export default function PaymentsPage({ user, onLogout }) {
     }
   };
 
-  const calculateSummary = (paymentsData) => {
+  const calculateSummary = (paymentsData, tripsData = []) => {
     const totalDriverPayments = paymentsData
       .filter(p => p.driver_id)
       .reduce((sum, p) => sum + (p.amount || 0), 0);
-    const totalCustomerReceipts = paymentsData
-      .filter(p => p.trip_id)
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalCustomerReceipts = tripsData
+      .reduce((sum, t) => sum + (t.received_amount || 0), 0);
     const totalPayments = paymentsData
       .reduce((sum, p) => sum + (p.amount || 0), 0);
     setSummary({ totalDriverPayments, totalCustomerReceipts, totalPayments });
@@ -214,7 +219,7 @@ export default function PaymentsPage({ user, onLogout }) {
           </div>
           <div style={s.summaryCard}>
             <div style={s.summaryIcon}>
-              <i className="ti ti-money" style={{ fontSize: 24, color: '#7C63FF' }} />
+              <i className="ti ti-cash" style={{ fontSize: 24, color: '#7C63FF' }} />
             </div>
             <div>
               <p style={s.summaryLabel}>Total Payments</p>

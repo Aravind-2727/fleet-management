@@ -1,6 +1,11 @@
 'use client';
 
-export default function Header({ user, onMenuClick, title = 'Dashboard', subtitle = 'Overview' }) {
+import { usePathname } from 'next/navigation';
+
+export default function Header({ user, onMenuClick }) {
+  const pathname = usePathname();
+  const isDashboard = pathname === '/dashboard';
+
   return (
     <>
       <style>{`
@@ -24,10 +29,12 @@ export default function Header({ user, onMenuClick, title = 'Dashboard', subtitl
           >
             <i className="ti ti-menu-2" style={{ fontSize: 22 }} />
           </button>
-          <div>
-            <p style={s.headerSub}>{subtitle}</p>
-            <h1 style={s.headerTitle} className="hdr-title">{title}</h1>
-          </div>
+          {isDashboard && (
+            <div>
+              <p style={s.headerSub}>Overview</p>
+              <h1 style={s.headerTitle} className="hdr-title">Dashboard</h1>
+            </div>
+          )}
         </div>
 
         <div style={s.headerRight}>

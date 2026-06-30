@@ -77,9 +77,15 @@ export default function AdvancesPage({ user, onLogout }) {
   }, [fetchAdvances, fetchDrivers]);
 
   const calculateSummary = (advancesData) => {
-    const totalPending = advancesData.filter(a => a.status === 'pending').reduce((sum, a) => sum + (a.amount || 0), 0);
-    const totalApproved = advancesData.filter(a => a.status === 'approved').reduce((sum, a) => sum + (a.amount || 0), 0);
-    const totalPaid = advancesData.filter(a => a.status === 'paid').reduce((sum, a) => sum + (a.amount || 0), 0);
+    const totalPending = advancesData
+      .filter(a => a.status === 'pending' || a.status === 'approved')
+      .reduce((sum, a) => sum + (a.amount || 0), 0);
+    const totalApproved = advancesData
+      .filter(a => a.status === 'approved')
+      .reduce((sum, a) => sum + (a.amount || 0), 0);
+    const totalPaid = advancesData
+      .filter(a => a.status === 'paid')
+      .reduce((sum, a) => sum + (a.amount || 0), 0);
     setSummary({ totalPending, totalApproved, totalPaid });
   };
 
@@ -297,7 +303,6 @@ export default function AdvancesPage({ user, onLogout }) {
                         <option value="pending">Pending</option>
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
-                        <option value="paid">Paid</option>
                       </select>
                     </td>
                     <td style={s.td}>{new Date(advance.requested_date).toLocaleDateString()}</td>

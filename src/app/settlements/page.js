@@ -610,8 +610,7 @@ export default function SettlementsPage({ user, onLogout }) {
                 {settlements.map((settlement) => (
                   <Fragment key={settlement.id}>
                     <tr
-                      onClick={() => toggleSettlementExpand(settlement.id)}
-                      style={{ ...s.tr, cursor: 'pointer' }}
+                      style={s.tr}
                     >
                       <td style={s.td}>{getDriverName(settlement.driver_id)}</td>
                     <td style={s.td}>{getTripInfo(settlement.trip_id)}</td>
@@ -620,7 +619,11 @@ export default function SettlementsPage({ user, onLogout }) {
                     <td style={s.td}>
                       <select
                         value={settlement.payment_status}
-                        onChange={(e) => updateSettlementStatus(settlement.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          updateSettlementStatus(settlement.id, e.target.value);
+                        }}
                         style={{
                           ...s.statusSelect,
                           backgroundColor: getStatusBadge(settlement.payment_status).bg,
@@ -645,7 +648,7 @@ export default function SettlementsPage({ user, onLogout }) {
                       </span>
                     </td>
                     <td style={{ ...s.td, textAlign: 'right' }}>
-                      <button onClick={() => deleteSettlement(settlement.id)} style={s.deleteBtn}>Delete</button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteSettlement(settlement.id); }} style={s.deleteBtn}>Delete</button>
                     </td>
                     </tr>
                     {expandedSettlementId === settlement.id && (
@@ -769,7 +772,7 @@ const s = {
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 800 },
   th: { textAlign: 'left', padding: '12px 16px', fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(20,20,30,0.4)', borderBottom: '1px solid rgba(20,20,30,0.07)', whiteSpace: 'nowrap' },
   tr: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
-  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' },
+  td: { padding: '12px 16px', fontSize: 14, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap', verticalAlign: 'middle' },
   statusSelect: { border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif", cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: 32, minHeight: 28 },
   deleteBtn: { background: 'rgba(224,82,74,0.1)', border: '1px solid rgba(224,82,74,0.25)', color: '#E0524A', padding: '7px 16px', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: "'Outfit', sans-serif", minHeight: 34 },
   expandedRow: { borderBottom: '1px solid rgba(20,20,30,0.05)' },
