@@ -54,14 +54,55 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Get user role from profiles table
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
+  // Read selected role from cookie (set during login)
+  const selectedRole = request.cookies.get('selected_role')?.value;
 
-  const role = profile?.role;
+  let role = null;
+
+  if (selectedRole === 'driver') {
+    // Driver access: verify profile exists AND a drivers record links to it
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile) {
+      const { data: driver } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+
+      if (driver) {
+        role = 'driver';
+      }
+    }
+  } else {
+    // Owner or no cookie: verify profile exists
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile) {
+      role = 'owner';
+    }
+  }
+
+  // Fallback: try to find any profile
+  if (!role) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile) {
+      role = 'owner';
+    }
+  }
 
   if (needsOwner && role !== 'owner') {
     if (role === 'driver') return NextResponse.redirect(new URL('/driver/home', request.url));

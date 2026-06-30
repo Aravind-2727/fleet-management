@@ -84,15 +84,56 @@ export default function DriversPage({ user, onLogout }) {
         return;
       }
 
-      // Create driver directly (new API route architecture)
+      const email = formData.email.trim();
+
+      // STEP 1: Look up profile by email
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error looking up profile:', profileError);
+        alert('Error verifying driver account. Please try again.');
+        return;
+      }
+
+      // STEP 3: If profile does NOT exist, block creation
+      if (!profile) {
+        alert('Driver account not found.\nAsk the driver to sign up first.');
+        return;
+      }
+
+      // Validation: Prevent duplicate drivers for the same owner
+      const { data: existing, error: dupError } = await supabase
+        .from('drivers')
+        .select('id')
+        .eq('owner_id', authUser.id)
+        .eq('email', email)
+        .maybeSingle();
+
+      if (dupError) {
+        console.error('Error checking duplicate:', dupError);
+        alert('Error verifying driver. Please try again.');
+        return;
+      }
+
+      if (existing) {
+        alert('This driver already exists.');
+        return;
+      }
+
+      // STEP 2: Create driver with profile_id
       const { error } = await supabase
         .from('drivers')
         .insert([
           {
             owner_id: authUser.id,
+            profile_id: profile.id,
             name: formData.name.trim(),
             phone: formData.phone.trim(),
-            email: formData.email.trim(),
+            email: email,
             pay_type: formData.payType,
             salary_amount: formData.payType === 'monthly_salary' ? 0 : null,
             status: formData.status,
