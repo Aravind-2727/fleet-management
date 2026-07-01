@@ -9,7 +9,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [signupRole, setSignupRole] = useState('owner');
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { signup: authSignup, loading: authLoading } = useAuth();
@@ -23,7 +23,7 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      await authSignup(email.trim(), password, name.trim(), signupRole);
+      await authSignup(email.trim(), password, name.trim());
     } catch (error) {
       console.error(error);
       setError(error.message);
@@ -78,13 +78,7 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)} style={s.input} />
         </div>
 
-        <div style={s.field}>
-          <label style={s.label}>I am a</label>
-          <select value={signupRole} onChange={(e) => setSignupRole(e.target.value)} style={s.input}>
-            <option value="owner">Fleet Owner</option>
-            <option value="driver">Driver</option>
-          </select>
-        </div>
+        
 
         <button onClick={signUp} disabled={loading || authLoading} style={s.primaryBtn}>
           {loading ? 'Please wait...' : 'Create Account'}

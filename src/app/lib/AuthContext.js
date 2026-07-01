@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 
@@ -16,61 +16,34 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
 
-  const getCookie = (name) => {
-    if (typeof document === 'undefined') return null;
-    const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
-    return match ? match[1] : null;
-  };
-
-  const setCookie = (name, value) => {
-    if (typeof document === 'undefined') return;
-    document.cookie = `${name}=${value}; path=/; max-age=604800; SameSite=Lax`;
-  };
-
-  const clearCookie = (name) => {
-    if (typeof document === 'undefined') return;
-    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
-  };
-
-  const verifyOwnerAccess = async (userId) => {
-    const { data: profile } = await supabase
+  // Pure helper: query profile, validate role, return data or throw
+  const loadProfile = useCallback(async (userId) => {
+    const { data: profileData, error } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, role, name, phone, email, fleet_owner_id, created_at, updated_at')
       .eq('id', userId)
-      .maybeSingle();
-    return !!profile;
-  };
+      .single();
 
-  const verifyDriverAccess = async (userId) => {
-    const { data: driver } = await supabase
-      .from('drivers')
-      .select('id')
-      .eq('profile_id', userId)
-      .maybeSingle();
-    return !!driver;
-  };
+    if (error) throw error;
+    if (!profileData) throw new Error('Profile not found');
 
-  const resolveUserRole = async (userId) => {
-    const storedRole = getCookie('selected_role');
-    if (storedRole === 'driver') {
-      const isDriver = await verifyDriverAccess(userId);
-      if (isDriver) return 'driver';
-      clearCookie('selected_role');
+    const validRoles = ['owner', 'driver'];
+    if (!validRoles.includes(profileData.role)) {
+      throw new Error('Invalid role');
     }
-    const isOwner = await verifyOwnerAccess(userId);
-    if (isOwner) {
-      if (storedRole !== 'owner') setCookie('selected_role', 'owner');
-      return 'owner';
-    }
-    return null;
-  };
+
+    return profileData;
+  }, []);
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
       try {
         setLoading(true);
@@ -78,20 +51,35 @@ export const AuthProvider = ({ children }) => {
         const session = data?.session;
         const currentUser = session?.user;
 
-        if (currentUser) {
-          const role = await resolveUserRole(currentUser.id);
-          setUserRole(role);
+        if (currentUser && mounted) {
           setUser(currentUser);
-        } else {
+          try {
+            const profileData = await loadProfile(currentUser.id);
+            if (mounted) {
+              setProfile(profileData);
+              setRole(profileData.role);
+            }
+          } catch {
+            if (mounted) {
+              setUser(null);
+              setProfile(null);
+              setRole(null);
+            }
+          }
+        } else if (mounted) {
           setUser(null);
-          setUserRole(null);
+          setProfile(null);
+          setRole(null);
         }
       } catch (err) {
-        setError(err.message);
-        setUser(null);
-        setUserRole(null);
+        if (mounted) {
+          setError(err.message);
+          setUser(null);
+          setProfile(null);
+          setRole(null);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -100,24 +88,23 @@ export const AuthProvider = ({ children }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          const role = await resolveUserRole(session.user.id);
-          setUserRole(role);
           setUser(session.user);
+          // loadProfile is called by login() — skip duplicate
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
-          setUserRole(null);
-          clearCookie('selected_role');
-          router.push('/');
+          setProfile(null);
+          setRole(null);
         }
       }
     );
 
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, loadProfile]);
 
-  const login = async (email, password, selectedRole) => {
+  const login = async (email, password) => {
     try {
       setLoading(true);
       setError(null);
@@ -129,24 +116,23 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
 
       if (data?.user) {
-        if (selectedRole === 'driver') {
-          const isDriver = await verifyDriverAccess(data.user.id);
-          if (!isDriver) {
-            throw new Error('Driver access not found.');
+        setUser(data.user);
+        try {
+          const profileData = await loadProfile(data.user.id);
+          setProfile(profileData);
+          setRole(profileData.role);
+
+          if (profileData.role === 'driver') {
+            router.push('/driver/home');
+          } else {
+            router.push('/dashboard');
           }
-          setCookie('selected_role', 'driver');
-          setUserRole('driver');
-          setUser(data.user);
-          router.push('/driver/home');
-        } else {
-          const isOwner = await verifyOwnerAccess(data.user.id);
-          if (!isOwner) {
-            throw new Error('Owner access not found.');
-          }
-          setCookie('selected_role', 'owner');
-          setUserRole('owner');
-          setUser(data.user);
-          router.push('/dashboard');
+        } catch {
+          setUser(null);
+          setProfile(null);
+          setRole(null);
+          router.push('/');
+          throw new Error('Access not found. Please sign up first.');
         }
       }
       return data;
@@ -158,7 +144,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (email, password, name, role = 'owner') => {
+  const signup = async (email, password, name) => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signUp({
@@ -180,7 +166,7 @@ export const AuthProvider = ({ children }) => {
             {
               id: data.user.id,
               email: data.user.email,
-              role: role,
+              role: 'owner',
               name: name,
               phone: '',
               fleet_owner_id: null,
@@ -189,8 +175,6 @@ export const AuthProvider = ({ children }) => {
 
         if (profileError) throw profileError;
 
-        // After signup, clear any auto-session and redirect to login
-        clearCookie('selected_role');
         try {
           await supabase.auth.signOut();
         } catch (_) {}
@@ -209,7 +193,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/update-password`,
       });
       if (error) throw error;
       return { success: true };
@@ -227,8 +211,8 @@ export const AuthProvider = ({ children }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
-      setUserRole(null);
-      clearCookie('selected_role');
+      setProfile(null);
+      setRole(null);
       router.push('/');
     } catch (err) {
       setError(err.message);
@@ -243,18 +227,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAuthorized = (requiredRole) => {
-    if (!userRole) return false;
+    if (!role) return false;
     
     if (requiredRole === 'owner') {
-      return userRole === 'owner';
+      return role === 'owner';
     }
     
     if (requiredRole === 'driver') {
-      return userRole === 'driver';
+      return role === 'driver';
     }
     
     if (requiredRole === 'any') {
-      return userRole === 'owner' || userRole === 'driver';
+      return role === 'owner' || role === 'driver';
     }
     
     return false;
@@ -262,7 +246,8 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    userRole,
+    profile,
+    role,
     loading,
     error,
     login,

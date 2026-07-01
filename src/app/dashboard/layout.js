@@ -9,7 +9,7 @@ import { useAuth } from '../../app/lib/AuthContext';
 const BREAKPOINT = 768;
 
 export default function DashboardLayout({ children }) {
-  const { user, userRole, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(false);
@@ -20,7 +20,7 @@ export default function DashboardLayout({ children }) {
       router.replace('/');
       return;
     }
-  }, [user, userRole, loading, router]);
+  }, [user, loading, router]);
 
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${BREAKPOINT}px)`);

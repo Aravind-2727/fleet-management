@@ -16,8 +16,10 @@ const driverRoutes = [
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow login/signup page
-  if (pathname === '/') return NextResponse.next();
+  // Allow public pages through without auth
+  if (pathname === '/' || pathname === '/login' || pathname === '/signup') {
+    return NextResponse.next();
+  }
 
   // Check if route needs protection
   const needsOwner = ownerRoutes.some(route => pathname.startsWith(route));
@@ -54,54 +56,22 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Read selected role from cookie (set during login)
-  const selectedRole = request.cookies.get('selected_role')?.value;
+  // Single query: get role from profiles table
+  // profiles.role is the single source of truth
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
 
-  let role = null;
-
-  if (selectedRole === 'driver') {
-    // Driver access: verify profile exists AND a drivers record links to it
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile) {
-      const { data: driver } = await supabase
-        .from('drivers')
-        .select('id')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
-
-      if (driver) {
-        role = 'driver';
-      }
-    }
-  } else {
-    // Owner or no cookie: verify profile exists
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (profile) {
-      role = 'owner';
-    }
+  if (!profile) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Fallback: try to find any profile
-  if (!role) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle();
+  const role = profile.role;
 
-    if (profile) {
-      role = 'owner';
-    }
+  if (role !== 'owner' && role !== 'driver') {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   if (needsOwner && role !== 'owner') {

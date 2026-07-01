@@ -1,5 +1,4 @@
 'use client';
-
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
@@ -8,27 +7,25 @@ import { canAccessRoute } from './roleGuard';
 export const withRoleProtection = (WrappedComponent, requiredRoute) => {
   return function ProtectedComponent(props) {
     const router = useRouter();
-    const { userRole, loading } = useAuth();
+    const { user, profile, role, loading } = useAuth();
 
-    const hasAccess = canAccessRoute(requiredRoute, userRole);
+    const hasAccess = canAccessRoute(requiredRoute, role);
 
-  
     useEffect(() => {
-      if (!loading && !userRole) {
+      if (!loading && !user) {
         router.replace('/');
       }
-    }, [loading, userRole, router]);
+    }, [loading, user, router]);
 
     useEffect(() => {
-      if (!loading && userRole && !hasAccess) {
-        if (userRole === 'driver') {
+      if (!loading && user && !hasAccess) {
+        if (role === 'driver') {
           router.replace('/driver/home');
         } else {
           router.replace('/dashboard');
         }
       }
-    }, [loading, userRole, hasAccess, router]);
-
+    }, [loading, role, hasAccess, router]);
 
     if (loading) {
       return (
@@ -39,11 +36,11 @@ export const withRoleProtection = (WrappedComponent, requiredRoute) => {
       );
     }
 
-    if (!userRole || !hasAccess) {
+    if (!user || !role || !hasAccess) {
       return null;
     }
 
-    return <WrappedComponent {...props} userRole={userRole} />;
+    return <WrappedComponent {...props} />;
   };
 };
 

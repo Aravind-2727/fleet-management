@@ -8,11 +8,11 @@ import Link from 'next/link';
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loginRole, setLoginRole] = useState('owner');
+  
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
-  const { user, userRole, login: authLogin, resetPassword, loading: authLoading } = useAuth();
+  const { user, profile, role, login: authLogin, resetPassword, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -27,17 +27,6 @@ function LoginForm() {
       setPassword('');
     }
   }, [user]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (user && userRole) {
-      if (userRole === 'driver') {
-        router.push('/driver/home');
-      } else {
-        router.push('/dashboard');
-      }
-    }
-  }, [user, userRole, authLoading, router]);
 
   const handleResetPassword = async () => {
     if (!email.trim()) { alert('Please enter your email address first'); return; }
@@ -54,10 +43,10 @@ function LoginForm() {
     setSuccessMsg(null);
     setLoading(true);
     try {
-      await authLogin(email, password, loginRole);
-    } catch (error) {
-      setLoginError(error.message);
-    } finally { setLoading(false); }
+await authLogin(email, password);
+  } catch (error) {
+    setLoginError(error.message);
+  } finally { setLoading(false); }
   };
 
   return (
@@ -123,13 +112,7 @@ function LoginForm() {
           </div>
         </div>
 
-        <div style={s.field}>
-          <label style={s.label}>Login as</label>
-          <select value={loginRole} onChange={(e) => setLoginRole(e.target.value)} style={s.input}>
-            <option value="owner">Owner</option>
-            <option value="driver">Driver</option>
-          </select>
-        </div>
+        
 
         <button onClick={login} disabled={loading || authLoading} style={s.primaryBtn}>
           {loading ? 'Please wait...' : 'Login'}

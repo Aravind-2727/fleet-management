@@ -85,68 +85,71 @@ export default function DriversPage({ user, onLogout }) {
       }
 
       const email = formData.email.trim();
+      const name = formData.name.trim();
+      const phone = formData.phone.trim();
 
-      // STEP 1: Look up profile by email
-      const { data: profile, error: profileError } = await supabase
+      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: tempPassword,
+        options: {
+          data: { name }
+        }
+        
+      });
+
+      if (authError) {
+        console.error('Error creating driver account:', authError);
+        alert('Error creating driver account. Please try again.');
+        return;
+      }
+
+      const driverUserId = authData.user.id;
+
+      const { error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
+        .insert([
+          {
+            id: driverUserId,
+            email,
+            role: 'driver',
+            name,
+            phone,
+            fleet_owner_id: authUser.id,
+          },
+        ]);
 
       if (profileError) {
-        console.error('Error looking up profile:', profileError);
-        alert('Error verifying driver account. Please try again.');
+        console.error('Error creating driver profile:', profileError);
+        await supabase.auth.admin.deleteUser(driverUserId);
+        alert('Error creating driver profile. Please try again.');
         return;
       }
 
-      // STEP 3: If profile does NOT exist, block creation
-      if (!profile) {
-        alert('Driver account not found.\nAsk the driver to sign up first.');
-        return;
-      }
-
-      // Validation: Prevent duplicate drivers for the same owner
-      const { data: existing, error: dupError } = await supabase
-        .from('drivers')
-        .select('id')
-        .eq('owner_id', authUser.id)
-        .eq('email', email)
-        .maybeSingle();
-
-      if (dupError) {
-        console.error('Error checking duplicate:', dupError);
-        alert('Error verifying driver. Please try again.');
-        return;
-      }
-
-      if (existing) {
-        alert('This driver already exists.');
-        return;
-      }
-
-      // STEP 2: Create driver with profile_id
-      const { error } = await supabase
+      const { error: driverError } = await supabase
         .from('drivers')
         .insert([
           {
             owner_id: authUser.id,
-            profile_id: profile.id,
-            name: formData.name.trim(),
-            phone: formData.phone.trim(),
-            email: email,
+            profile_id: driverUserId,
+            name,
+            phone,
+            email,
             pay_type: formData.payType,
             salary_amount: formData.payType === 'monthly_salary' ? 0 : null,
             status: formData.status,
           },
         ]);
 
-      if (error) {
-        console.error('Error creating driver:', error);
-        alert(error.message);
+      if (driverError) {
+        console.error('Error creating driver:', driverError);
+        await supabase.from('profiles').delete().eq('id', driverUserId);
+        await supabase.auth.admin.deleteUser(driverUserId);
+        alert(driverError.message);
         return;
       }
 
-      // Reset form
       setFormData({
         name: '',
         phone: '',
@@ -156,10 +159,9 @@ export default function DriversPage({ user, onLogout }) {
       });
       setShowForm(false);
 
-      // Refresh data
       fetchDrivers();
 
-      alert('Driver added successfully');
+      alert('Driver added successfully. Driver can now login with their email and the temporary password.');
     } catch (error) {
       console.error('Error creating driver:', error);
       alert('Failed to create driver. Please try again.');

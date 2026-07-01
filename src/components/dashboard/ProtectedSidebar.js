@@ -43,7 +43,7 @@ const DRIVER_NAV_ITEMS = [
   },
 ];
 export default function ProtectedSidebar({ user, onLogout, isOpen, onClose, isMobile }) {
-  const { userRole, loading, logout } = useAuth();
+  const { role, loading, logout } = useAuth();
   const pathname = usePathname();
 
   const handleLogout = async () => {
@@ -52,7 +52,7 @@ export default function ProtectedSidebar({ user, onLogout, isOpen, onClose, isMo
     catch (e) { console.error('Logout error:', e); }
   };
 const menuItems =
-  userRole === 'driver'
+  role === 'driver'
     ? DRIVER_NAV_ITEMS
     : NAV_ITEMS;
   return (
@@ -120,7 +120,7 @@ const menuItems =
         <div style={s.footer}>
           <div style={s.userInfo}>
             <span style={s.userEmail} title={user?.email}>{user?.email}</span>
-            {userRole && <span style={s.userRole}>{userRole}</span>}
+            {role && <span style={s.userRole}>{role}</span>}
           </div>
           <button
             onClick={handleLogout}

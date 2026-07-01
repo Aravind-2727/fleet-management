@@ -16,7 +16,7 @@ import DashboardAlertCards from '../../components/dashboard/DashboardAlertCards'
 import NotificationPanel from '../../components/dashboard/NotificationPanel';
 
 export default function Dashboard() {
-const { user, loading, userRole } = useAuth();
+const { user, loading, role } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [expensesLoading, setExpensesLoading] = useState(true);
   const [drivers, setDrivers] = useState([]);
@@ -217,10 +217,10 @@ useEffect(() => {
     router.replace('/');
     return;
   }
-  if (userRole === 'driver') {
+  if (role === 'driver') {
     router.replace('/driver/home');
   }
-}, [user, userRole, loading, router]);
+}, [user, role, loading, router]);
   if (loading) {
     return (
       <div style={s.center}>

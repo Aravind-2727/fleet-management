@@ -1,67 +1,39 @@
 'use client';
 
+export const ROLE_PERMISSIONS = {
+  '/dashboard': 'owner',
+  '/trips': 'owner',
+  '/trips-management': 'owner',
+  '/drivers': 'owner',
+  '/trucks': 'owner',
+  '/expenses': 'owner',
+  '/advances': 'owner',
+  '/settlements': 'owner',
+  '/payments': 'owner',
+  '/reports': 'owner',
+  '/settings': 'owner',
+  '/driver/home': 'driver',
+  '/driver/mytrip': 'driver',
+  '/driver/expenses': 'driver',
+  '/driver/advances': 'driver',
+  '/driver/pay': 'driver',
+};
+
 export const roleGuard = (requiredRole) => {
-  return (userRole) => {
-    if (!userRole) return false;
-    
-    if (requiredRole === 'owner') {
-      return userRole === 'owner';
-    }
-    
-    if (requiredRole === 'driver') {
-      return userRole === 'driver';
-    }
-    
-    if (requiredRole === 'any') {
-      return userRole === 'owner' || userRole === 'driver';
-    }
-    
-    return false;
+  return (roleParam) => {
+    if (!roleParam || !requiredRole) return false;
+    if (requiredRole === 'any') return roleParam === 'owner' || roleParam === 'driver';
+    return roleParam === requiredRole;
   };
 };
 
-export const canAccessRoute = (route, userRole) => {
-  const routePermissions = {
-    '/dashboard': 'owner',
-    '/driver/home': 'driver',
-    '/driver/mytrip': 'driver',
-    '/driver/expenses': 'driver',
-    '/driver/advances': 'driver',
-    '/driver/pay': 'driver',
-    '/trips': 'owner',
-    '/trips-management': 'owner',
-    '/drivers': 'owner',
-    '/trucks': 'owner',
-    '/expenses': 'owner',
-    '/advances': 'owner',
-    '/settlements': 'owner',
-    '/payments': 'owner',
-    '/reports': 'owner',
-    '/settings': 'owner',
-  };
-
-  return routePermissions[route] ? roleGuard(routePermissions[route])(userRole) : false;
+export const canAccessRoute = (route, role) => {
+  const matched = Object.entries(ROLE_PERMISSIONS).find(([prefix]) =>
+    route === prefix || route.startsWith(prefix + '/')
+  );
+  return matched ? matched[1] === role : false;
 };
 
-export const canAccessModule = (module, userRole) => {
-  const modulePermissions = {
-    'dashboard': 'owner',
-    'driver/home': 'driver',
-    'driver/mytrip': 'driver',
-    'driver/expenses': 'driver',
-    'driver/advances': 'driver',
-    'driver/pay': 'driver',
-    'trips': 'owner',
-    'trips-management': 'owner',
-    'drivers': 'owner',
-    'trucks': 'owner',
-    'expenses': 'owner',
-    'advances': 'owner',
-    'settlements': 'owner',
-    'payments': 'owner',
-    'reports': 'owner',
-    'settings': 'owner',
-  };
-
-  return modulePermissions[module] ? roleGuard(modulePermissions[module])(userRole) : false;
+export const canAccessModule = (module, role) => {
+  return canAccessRoute('/' + module.replace(/^\//, ''), role);
 };
