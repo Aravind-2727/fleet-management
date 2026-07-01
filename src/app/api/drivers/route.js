@@ -27,22 +27,31 @@ export async function POST(request) {
   }
 
   /* ── 1. Authenticate using the session cookie ── */
-  const { createServerClient } = await import('@supabase/ssr');
-  const cookieStore = cookies();
+  let supabase;
+  try {
+    const { createServerClient } = await import('@supabase/ssr');
+    const cookieStore = await cookies();
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
+    supabase = createServerClient(
+      supabaseUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          // We only read the session here—no cookies are set.
+          setAll() {},
         },
-        // We only read the session here—no cookies are set.
-        setAll() {},
-      },
-    }
-  );
+      }
+    );
+  } catch (initError) {
+    console.error('Session initialization failed:', initError);
+    return NextResponse.json(
+      { error: 'Authentication service unavailable' },
+      { status: 500 }
+    );
+  }
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -78,9 +87,9 @@ export async function POST(request) {
     );
   }
 
-  const { name, email, phone, payType, status } = payload;
+  const { name, email, phone, password, payType, status } = payload;
 
-  if (!name?.trim() || !email?.trim()) {
+  if (!name?.trim() || !email?.trim() || !password?.trim()) {
     return NextResponse.json(
       { error: 'Missing required fields' },
       { status: 400 }
@@ -126,13 +135,9 @@ export async function POST(request) {
 
   /* ── 6. Create auth user (service role) ── */
 
-  const tempPassword =
-    Math.random().toString(36).slice(-8) +
-    Math.random().toString(36).slice(-8);
-
   const { data: authData, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
     email: normalizedEmail,
-    password: tempPassword,
+    password: password.trim(),
     email_confirm: true,
     user_metadata: { name: name.trim() },
   });
@@ -150,7 +155,7 @@ export async function POST(request) {
   let driverCreated = false;
 
   try {
-    /* ── 6. Create profile row ── */
+    /* ── 7. Create profile row ── */
     const { error: insertProfileError } = await supabaseAdmin
       .from('profiles')
       .insert([
@@ -170,7 +175,7 @@ export async function POST(request) {
 
     profileCreated = true;
 
-    /* ── 7. Create drivers table row ── */
+    /* ── 8. Create drivers table row ── */
     const { data: driverRow, error: driverInsertError } = await supabaseAdmin
       .from('drivers')
       .insert([
@@ -196,15 +201,14 @@ export async function POST(request) {
 
     driverCreated = true;
 
-    /* ── 8. Success response ── */
+    /* ── 9. Success response ── */
     return NextResponse.json({
       success: true,
-      temporaryPassword: tempPassword,
       driverId: driverRow.id,
       message: 'Driver created successfully',
     });
   } catch (error) {
-    /* ── 9. Transaction rollback ── */
+    /* ── 10. Transaction rollback ── */
     if (profileCreated) {
       await supabaseAdmin.from('profiles').delete().eq('id', driverUserId);
     }

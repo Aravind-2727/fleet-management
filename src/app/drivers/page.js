@@ -14,9 +14,11 @@ export default function DriversPage({ user, onLogout }) {
     name: '',
     phone: '',
     email: '',
-    payType: 'per_trip',
-    status: 'Active',
-  });
+  payType: 'per_trip',
+  status: 'Active',
+  password: '',
+  confirmPassword: '',
+});
 
   useEffect(() => {
     fetchDrivers();
@@ -58,115 +60,76 @@ export default function DriversPage({ user, onLogout }) {
     }
   };
 
-  const validateForm = () => {
-    if (!formData.name || formData.name.trim().length < 2) {
-      alert('Enter valid driver name (at least 2 characters)');
-      return false;
-    }
-    if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-      alert('Enter valid phone number');
-      return false;
-    }
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      alert('Enter valid email address');
-      return false;
-    }
-    return true;
-  };
+const validateForm = () => {
+  if (!formData.name || formData.name.trim().length < 2) {
+    alert('Enter valid driver name (at least 2 characters)');
+    return false;
+  }
+  if (!formData.password || formData.password.length < 8) {
+    alert('Password must be at least 8 characters');
+    return false;
+  }
+  if (!formData.confirmPassword) {
+    alert('Please confirm your password');
+    return false;
+  }
+  if (formData.password !== formData.confirmPassword) {
+    alert('Passwords do not match');
+    return false;
+  }
+  if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
+    alert('Enter valid phone number');
+    return false;
+  }
+  if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    alert('Enter valid email address');
+    return false;
+  }
+  return true;
+};
 
-  const saveDriver = async () => {
-    if (!validateForm()) return;
+const saveDriver = async () => {
+  if (!validateForm()) return;
 
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        alert('Not authenticated. Please login again.');
-        return;
-      }
+  const email = formData.email.trim();
+  const password = formData.password;
 
-      const email = formData.email.trim();
-      const name = formData.name.trim();
-      const phone = formData.phone.trim();
-
-      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+  try {
+    const response = await fetch('/api/drivers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
         email,
-        password: tempPassword,
-        options: {
-          data: { name }
-        }
-        
-      });
+        password,
+        payType: formData.payType,
+        status: formData.status,
+      }),
+    });
 
-      if (authError) {
-        console.error('Error creating driver account:', authError);
-        alert('Error creating driver account. Please try again.');
-        return;
-      }
-
-      const driverUserId = authData.user.id;
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: driverUserId,
-            email,
-            role: 'driver',
-            name,
-            phone,
-            fleet_owner_id: authUser.id,
-          },
-        ]);
-
-      if (profileError) {
-        console.error('Error creating driver profile:', profileError);
-        await supabase.auth.admin.deleteUser(driverUserId);
-        alert('Error creating driver profile. Please try again.');
-        return;
-      }
-
-      const { error: driverError } = await supabase
-        .from('drivers')
-        .insert([
-          {
-            owner_id: authUser.id,
-            profile_id: driverUserId,
-            name,
-            phone,
-            email,
-            pay_type: formData.payType,
-            salary_amount: formData.payType === 'monthly_salary' ? 0 : null,
-            status: formData.status,
-          },
-        ]);
-
-      if (driverError) {
-        console.error('Error creating driver:', driverError);
-        await supabase.from('profiles').delete().eq('id', driverUserId);
-        await supabase.auth.admin.deleteUser(driverUserId);
-        alert(driverError.message);
-        return;
-      }
-
-      setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        payType: 'per_trip',
-        status: 'Active',
-      });
-      setShowForm(false);
-
-      fetchDrivers();
-
-      alert('Driver added successfully. Driver can now login with their email and the temporary password.');
-    } catch (error) {
-      console.error('Error creating driver:', error);
-      alert('Failed to create driver. Please try again.');
+    const raw = await response.text();
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      alert('Server error. Please try again.');
+      return;
     }
-  };
+    if (!response.ok) {
+      alert(result.error || 'Failed to create driver');
+      return;
+    }
+
+    setFormData({ name: '', phone: '', email: '', payType: 'per_trip', status: 'Active', password: '', confirmPassword: '' });
+    setShowForm(false);
+    fetchDrivers();
+    alert('Driver created successfully.\n\nEmail: ' + email + '\n\nPassword: ' + password);
+  } catch (error) {
+    console.error('Error creating driver:', error);
+    alert('Failed to create driver. Please try again.');
+  }
+};
 
   const deleteDriver = async (id) => {
     if (!confirm('Are you sure you want to delete this driver?')) return;
@@ -251,14 +214,26 @@ export default function DriversPage({ user, onLogout }) {
             <h1 style={s.headerTitle}>Drivers Management</h1>
           </div>
 
-          <button onClick={() => setShowForm(true)} style={s.primaryBtn}>
+          <button onClick={() => {
+              setFormData({
+                name: '',
+                phone: '',
+                email: '',
+                password: '',
+                confirmPassword: '',
+                payType: 'per_trip',
+                status: 'Active',
+              });
+              setShowForm(true);
+            }} style={s.primaryBtn}>
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Driver
           </button>
         </div>
 
         {/* Add Form */}
         <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
-          <div style={s.formCard}>
+          <div autoComplete="off">
+          <form style={s.formCard} autoComplete="off" onSubmit={(e) => e.preventDefault()}>
             <div style={s.shimmer} />
             <h3 style={s.formTitle}>Add New Driver</h3>
 
@@ -285,15 +260,44 @@ export default function DriversPage({ user, onLogout }) {
 
               <div style={s.formField}>
                 <label style={s.label}>Email</label>
-                <input
-                  placeholder="e.g. john@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  style={s.input}
-                />
-              </div>
+      <input
+        placeholder="e.g. john@example.com"
+        autoComplete="new-email"
+        name="driver_email"
+        id="driver_email"
+        value={formData.email}
+        onChange={(e) => setFormData({...formData, email: e.target.value})}
+        style={s.input}
+      />
+    </div>
 
-              <div style={s.formField}>
+    <div style={s.formField}>
+      <label style={s.label}>Password</label>
+      <input
+        type="password"
+        placeholder="Minimum 8 characters"
+        autoComplete="new-password"
+        name="driver_password"
+        id="driver_password"
+        value={formData.password}
+        onChange={(e) => setFormData({...formData, password: e.target.value})}
+        style={s.input}
+      />
+    </div>
+
+    <div style={s.formField}>
+      <label style={s.label}>Confirm Password</label>
+      <input
+        type="password"
+        placeholder="Re-enter password"
+        autoComplete="new-password"
+        value={formData.confirmPassword}
+        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+        style={s.input}
+      />
+    </div>
+
+    <div style={s.formField}>
                 <label style={s.label}>Pay Type</label>
                 <select
                   value={formData.payType}
@@ -322,6 +326,7 @@ export default function DriversPage({ user, onLogout }) {
               <button onClick={saveDriver} style={s.saveBtn}>Save Driver</button>
               <button onClick={() => setShowForm(false)} style={s.cancelBtn}>Cancel</button>
             </div>
+          </form>
           </div>
         </Modal>
 
