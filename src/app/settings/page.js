@@ -18,6 +18,7 @@ export default function SettingsPage({ user, onLogout }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => { fetchProfile(); }, []);
+  useEffect(() => { setNewPassword(''); setConfirmPassword(''); }, []);
 
   const fetchProfile = async () => {
     try {
@@ -60,7 +61,8 @@ export default function SettingsPage({ user, onLogout }) {
     } catch (e) { console.error(e); alert('Failed to update profile.'); }
   };
 
-  const changePassword = async () => {
+  const changePassword = async (e) => {
+    e.preventDefault();
     setPasswordMessage('');
     setPasswordMessageType('');
 
@@ -207,66 +209,72 @@ export default function SettingsPage({ user, onLogout }) {
 
                 <div style={s.sectionDivider} />
 
-                <h2 style={s.sectionTitle}>Change Password</h2>
+                <form autoComplete="off" onSubmit={changePassword}>
+                  <h2 style={s.sectionTitle}>Change Password</h2>
 
-                <div style={s.passwordFormGrid}>
-                  <div style={s.formField}>
-                    <label style={s.label}>New Password</label>
-                    <div style={s.passwordFieldWrap}>
-                      <input
-                        type={showNewPassword ? 'text' : 'password'}
-                        placeholder="Enter new password"
-                        value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
-                        style={s.inputWithIcon}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(v => !v)}
-                        style={s.eyeToggle}
-                        aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                      >
-                        <EyeIcon open={showNewPassword} />
-                      </button>
+                  <div style={s.passwordFormGrid}>
+                    <div style={s.formField}>
+                      <label style={s.label}>New Password</label>
+                      <div style={s.passwordFieldWrap}>
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          placeholder="Enter new password"
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          style={s.inputWithIcon}
+                          autoComplete="new-password"
+                          name="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(v => !v)}
+                          style={s.eyeToggle}
+                          aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                        >
+                          <EyeIcon open={showNewPassword} />
+                        </button>
+                      </div>
+                    </div>
+                    <div style={s.formField}>
+                      <label style={s.label}>Confirm New Password</label>
+                      <div style={s.passwordFieldWrap}>
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder="Confirm new password"
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          style={s.inputWithIcon}
+                          autoComplete="new-password"
+                          name="confirm-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(v => !v)}
+                          style={s.eyeToggle}
+                          aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                        >
+                          <EyeIcon open={showConfirmPassword} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div style={s.formField}>
-                    <label style={s.label}>Confirm New Password</label>
-                    <div style={s.passwordFieldWrap}>
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Confirm new password"
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                        style={s.inputWithIcon}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(v => !v)}
-                        style={s.eyeToggle}
-                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                      >
-                        <EyeIcon open={showConfirmPassword} />
-                      </button>
-                    </div>
+
+                  {passwordMessage && (
+                    <p style={passwordMessageType === 'success' ? s.successMessage : s.errorMessage}>
+                      {passwordMessage}
+                    </p>
+                  )}
+
+                  <div style={s.formActions} className="form-actions">
+                    <button
+                      type="submit"
+                      style={s.changePasswordBtn}
+                      disabled={changingPassword}
+                    >
+                      {changingPassword ? 'Changing...' : 'Change Password'}
+                    </button>
                   </div>
-                </div>
-
-                {passwordMessage && (
-                  <p style={passwordMessageType === 'success' ? s.successMessage : s.errorMessage}>
-                    {passwordMessage}
-                  </p>
-                )}
-
-                <div style={s.formActions} className="form-actions">
-                  <button
-                    onClick={changePassword}
-                    style={s.changePasswordBtn}
-                    disabled={changingPassword}
-                  >
-                    {changingPassword ? 'Changing...' : 'Change Password'}
-                  </button>
-                </div>
+                </form>
               </>
             )}
 
